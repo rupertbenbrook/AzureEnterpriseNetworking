@@ -3,7 +3,13 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "namePrefix": {
-      "value": "rbpeer"
+      "value": "rbtst"
+    },
+    "primaryLocation": {
+      "value": "northeurope"
+    },
+    "secondaryLocation": {
+      "value": "westeurope"
     },
     "adminUsername": {
       "value": "Rupert"
