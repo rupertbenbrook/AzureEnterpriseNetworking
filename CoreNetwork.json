@@ -129,11 +129,11 @@
       }
     },
     {
-      "name": "[concat(variables('gatewayPublicIpName'), copyIndex(1))]",
+      "name": "[concat(variables('jumpVmPublicIpName'), copyIndex(1))]",
       "type": "Microsoft.Network/publicIPAddresses",
       "location": "[parameters('locations')[copyIndex()]]",
       "copy": {
-        "name": "gatewayPublicIpCopy",
+        "name": "jumpVmPublicIpCopy",
         "count": "[length(parameters('locations'))]"
       },
       "apiVersion": "2016-03-30",
@@ -141,12 +141,13 @@
         "publicIPAllocationMethod": "Dynamic"
       }
     },
+    /*
     {
-      "name": "[concat(variables('jumpVmPublicIpName'), copyIndex(1))]",
+      "name": "[concat(variables('gatewayPublicIpName'), copyIndex(1))]",
       "type": "Microsoft.Network/publicIPAddresses",
       "location": "[parameters('locations')[copyIndex()]]",
       "copy": {
-        "name": "jumpVmPublicIpCopy",
+        "name": "gatewayPublicIpCopy",
         "count": "[length(parameters('locations'))]"
       },
       "apiVersion": "2016-03-30",
@@ -191,6 +192,7 @@
         "enableBgp": "false"
       }
     },
+    */
     {
       "name": "[concat(variables('nvaVmNicName'), copyIndex(1))]",
       "type": "Microsoft.Network/networkInterfaces",
