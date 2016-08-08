@@ -67,7 +67,12 @@
     "secondaryGatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwipsec')]",
     "primaryGatewayName": "[concat(parameters('namePrefix'), 'gwpri')]",
     "secondaryGatewayName": "[concat(parameters('namePrefix'), 'gwsec')]",
-    "gatewaySku": "Standard"
+    "gatewaySku": "Standard",
+    // NICs
+    "primaryNvaVmNicName": "[concat(parameters('namePrefix'), 'nvanicpri')]",
+    "secondaryNvaVmNicName": "[concat(parameters('namePrefix'), 'nvanicsec')]",
+    "primaryJumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnicpri')]",
+    "secondaryJumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnicsec')]"
   },
   "resources": [
     {
@@ -274,6 +279,94 @@
         "gatewayType": "Vpn",
         "vpnType": "RouteBased",
         "enableBgp": "false"
+      }
+    },
+    {
+      "name": "[variables('primaryNvaVmNicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('primaryLocation')]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', variables('primaryVnetName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('primaryNvaVmNicName'), 'ipconfig')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('primaryVnetName')), '/subnets/NvaSubnet')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('secondaryNvaVmNicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('secondaryLocation')]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', variables('secondaryVnetName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('secondaryNvaVmNicName'), 'ipconfig')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('secondaryVnetName')), '/subnets/NvaSubnet')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('primaryJumpVmNicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('primaryLocation')]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', variables('primaryVnetName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('primaryJumpVmNicName'), 'ipconfig')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('primaryVnetName')), '/subnets/NvaSubnet')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('secondaryJumpVmNicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('secondaryLocation')]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', variables('secondaryVnetName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('secondaryJumpVmNicName'), 'ipconfig')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('secondaryVnetName')), '/subnets/NvaSubnet')]"
+              }
+            }
+          }
+        ]
       }
     }
   ]
