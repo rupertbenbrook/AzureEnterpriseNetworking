@@ -1,5 +1,6 @@
 ﻿$timestamp = [int]((Get-Date).Subtract([datetime]"2016-08-08 00:00:00").TotalMinutes / 2)
 $rgPrefix = "rb" + $timestamp   
+$rgPrefix
 $coreRg = $rgPrefix + "core"
 $liveRg = $rgPrefix + "live"
 $nliveRg = $rgPrefix + "nlive"
