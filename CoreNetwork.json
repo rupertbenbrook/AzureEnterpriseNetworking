@@ -4,30 +4,22 @@
   "parameters": {
     "namePrefix": {
       "type": "string",
-      "minLEngth": 1,
+      "minLength": 1,
       "maxLength": 6,
       "metadata": {
         "description": "The prefix to add to each resource name."
       }
     },
-    "primaryLocation": {
-      "type": "string",
-      "allowedValues": [
-        "northeurope",
-        "westeurope"
-      ],
+    "locations": {
+      "type": "array",
       "metadata": {
-        "description": "The primary location for resources."
+        "description": "The list of locations to deploy to."
       }
     },
-    "secondaryLocation": {
-      "type": "string",
-      "allowedValues": [
-        "northeurope",
-        "westeurope"
-      ],
+    "locationVnetPrefixes": {
+      "type": "array",
       "metadata": {
-        "description": "The secondary location for resources."
+        "description": "The list of vnet prefixes to use in each location."
       }
     },
     "adminUsername": {
@@ -47,38 +39,27 @@
   },
   "variables": {
     // Storage
-    "primaryVhdStorageName": "[concat(parameters('namePrefix'), 'vhdpri')]",
-    "secondaryVhdStorageName": "[concat(parameters('namePrefix'), 'vhdsec')]",
+    "vhdStorageName": "[concat(parameters('namePrefix'), 'vhd')]",
     "vhdStorageType": "Standard_LRS",
     "vhdContainerName": "vhds",
-    "primaryDiagStorageName": "[concat(parameters('namePrefix'), 'diagpri')]",
-    "secondaryDiagStorageName": "[concat(parameters('namePrefix'), 'diagsec')]",
+    "diagStorageName": "[concat(parameters('namePrefix'), 'diag')]",
     "diagStorageType": "Standard_LRS",
     // Vnets
-    "primaryVnetName": "[concat(parameters('namePrefix'), 'vnetpri')]",
-    "secondaryVnetName": "[concat(parameters('namePrefix'), 'vnetsec')]",
-    "primaryVnetAddress": "10.0.0.0/16",
-    "primaryVnetGatewaySubnet": "10.0.0.0/24",
-    "primaryVnetNvaSubnet": "10.0.1.0/24",
-    "secondaryVnetAddress": "10.1.0.0/16",
-    "secondaryVnetGatewaySubnet": "10.1.0.0/24",
-    "secondaryVnetNvaSubnet": "10.1.1.0/24",
+    "vnetName": "[concat(parameters('namePrefix'), 'vnet')]",
+    "vnetAddressSuffix": "0.0/16",
+    "vnetGatewaySubnetSuffix": "0.0/24",
+    "vnetNvaSubnetSuffix": "1.0/24",
     // Gateways
-    "primaryGatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwippri')]",
-    "secondaryGatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwipsec')]",
-    "primaryGatewayName": "[concat(parameters('namePrefix'), 'gwpri')]",
-    "secondaryGatewayName": "[concat(parameters('namePrefix'), 'gwsec')]",
+    "gatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwip')]",
+    "gatewayName": "[concat(parameters('namePrefix'), 'gw')]",
     "gatewaySku": "Standard",
     // NICs
-    "primaryNvaVmNicName": "[concat(parameters('namePrefix'), 'nvanicpri')]",
-    "secondaryNvaVmNicName": "[concat(parameters('namePrefix'), 'nvanicsec')]",
-    "primaryJumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnicpri')]",
-    "secondaryJumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnicsec')]",
+    "nvaVmNicName": "[concat(parameters('namePrefix'), 'nvanic')]",
+    "jumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnic')]",
     // VMs
-    "primaryNvaVmName": "[concat(parameters('namePrefix'), 'nvavmpri')]",
-    "secondaryNvaVmName": "[concat(parameters('namePrefix'), 'nvavmsec')]",
-    "primaryJumpVmName": "[concat(parameters('namePrefix'), 'jumpvmpri')]",
-    "secondaryJumpVmName": "[concat(parameters('namePrefix'), 'jumpvmsec')]",
+    "nvaVmName": "[concat(parameters('namePrefix'), 'nvavm')]",
+    "jumpVmName": "[concat(parameters('namePrefix'), 'jumpvm')]",
+    "jumpVmPublicIpName": "[concat(parameters('namePrefix'), 'jumpvmip')]",
     "vmSize": "Standard_F1",
     "vmImagePublisher": "MicrosoftWindowsServer",
     "vmImageOffer": "WindowsServer",
@@ -87,11 +68,12 @@
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('primaryVhdStorageName')]",
+      "name": "[concat(variables('vhdStorageName'), copyIndex(1))]",
       "apiVersion": "2016-01-01",
-      "location": "[parameters('primaryLocation')]",
-      "tags": {
-        "displayName": "Primary VHD Storage Account"
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "vhdStorageCopy",
+        "count": "[length(parameters('locations'))]"
       },
       "sku": {
         "name": "[variables('vhdStorageType')]"
@@ -101,25 +83,12 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('secondaryVhdStorageName')]",
+      "name": "[concat(variables('diagStorageName'), copyIndex(1))]",
       "apiVersion": "2016-01-01",
-      "location": "[parameters('secondaryLocation')]",
-      "tags": {
-        "displayName": "Secondary VHD Storage Account"
-      },
-      "sku": {
-        "name": "[variables('vhdStorageType')]"
-      },
-      "kind": "Storage",
-      "properties": {}
-    },
-    {
-      "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('primaryDiagStorageName')]",
-      "apiVersion": "2016-01-01",
-      "location": "[parameters('primaryLocation')]",
-      "tags": {
-        "displayName": "Primary Diagnostics Storage Account"
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "diagStorageCopy",
+        "count": "[length(parameters('locations'))]"
       },
       "sku": {
         "name": "[variables('diagStorageType')]"
@@ -128,107 +97,75 @@
       "properties": {}
     },
     {
-      "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('secondaryDiagStorageName')]",
-      "apiVersion": "2016-01-01",
-      "location": "[parameters('secondaryLocation')]",
-      "tags": {
-        "displayName": "Secondary Diagnostics Storage Account"
-      },
-      "sku": {
-        "name": "[variables('diagStorageType')]"
-      },
-      "kind": "Storage",
-      "properties": {}
-    },
-    {
-      "name": "[variables('primaryVnetName')]",
+      "name": "[concat(variables('vnetName'), copyIndex(1))]",
       "type": "Microsoft.Network/virtualNetworks",
-      "location": "[parameters('primaryLocation')]",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "vnetCopy",
+        "count": "[length(parameters('locations'))]"
+      },
       "apiVersion": "2016-03-30",
       "dependsOn": [],
-      "tags": {
-        "displayName": "Primary Vnet"
-      },
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
-            "[variables('primaryVnetAddress')]"
+            "[concat(parameters('locationVnetPrefixes')[copyIndex()], variables('vnetAddressSuffix'))]"
           ]
         },
         "subnets": [
           {
             "name": "GatewaySubnet",
             "properties": {
-              "addressPrefix": "[variables('primaryVnetGatewaySubnet')]"
+              "addressPrefix": "[concat(parameters('locationVnetPrefixes')[copyIndex()], variables('vnetGatewaySubnetSuffix'))]"
             }
           },
           {
             "name": "NvaSubnet",
             "properties": {
-              "addressPrefix": "[variables('primaryVnetNvaSubnet')]"
+              "addressPrefix": "[concat(parameters('locationVnetPrefixes')[copyIndex()], variables('vnetNvaSubnetSuffix'))]"
             }
           }
         ]
       }
     },
     {
-      "name": "[variables('secondaryVnetName')]",
-      "type": "Microsoft.Network/virtualNetworks",
-      "location": "[parameters('secondaryLocation')]",
-      "apiVersion": "2016-03-30",
-      "dependsOn": [],
-      "tags": {
-        "displayName": "Secondary Vnet"
+      "name": "[concat(variables('gatewayPublicIpName'), copyIndex(1))]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "gatewayPublicIpCopy",
+        "count": "[length(parameters('locations'))]"
       },
-      "properties": {
-        "addressSpace": {
-          "addressPrefixes": [
-            "[variables('secondaryVnetAddress')]"
-          ]
-        },
-        "subnets": [
-          {
-            "name": "GatewaySubnet",
-            "properties": {
-              "addressPrefix": "[variables('secondaryVnetGatewaySubnet')]"
-            }
-          },
-          {
-            "name": "NvaSubnet",
-            "properties": {
-              "addressPrefix": "[variables('secondaryVnetNvaSubnet')]"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "[variables('primaryGatewayPublicIpName')]",
-      "type": "Microsoft.Network/publicIPAddresses",
-      "location": "[parameters('primaryLocation')]",
       "apiVersion": "2016-03-30",
       "properties": {
         "publicIPAllocationMethod": "Dynamic"
       }
     },
     {
-      "name": "[variables('secondaryGatewayPublicIpName')]",
+      "name": "[concat(variables('jumpVmPublicIpName'), copyIndex(1))]",
       "type": "Microsoft.Network/publicIPAddresses",
-      "location": "[parameters('secondaryLocation')]",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "jumpVmPublicIpCopy",
+        "count": "[length(parameters('locations'))]"
+      },
       "apiVersion": "2016-03-30",
       "properties": {
         "publicIPAllocationMethod": "Dynamic"
       }
     },
     {
-      "name": "[variables('primaryGatewayName')]",
+      "name": "[concat(variables('gatewayName'), copyIndex(1))]",
       "type": "Microsoft.Network/virtualNetworkGateways",
-      "location": "[parameters('primaryLocation')]",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "gatewayCopy",
+        "count": "[length(parameters('locations'))]"
+      },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[concat('Microsoft.Network/publicIPAddresses/', variables('primaryGatewayPublicIpName'))]",
-        "[concat('Microsoft.Network/virtualNetworks/', variables('primaryVnetName'))]"
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('gatewayPublicIpName'), copyIndex(1))]",
+        "[concat('Microsoft.Network/virtualNetworks/', variables('vnetName'), copyIndex(1))]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -236,10 +173,10 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('primaryVnetName')), '/subnets/GatewaySubnet')]"
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('vnetName'), copyIndex(1))), '/subnets/GatewaySubnet')]"
               },
               "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('primaryGatewayPublicIpName'))]"
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(variables('gatewayPublicIpName'), copyIndex(1)))]"
               }
             },
             "name": "vnetGatewayConfig"
@@ -255,54 +192,55 @@
       }
     },
     {
-      "name": "[variables('secondaryGatewayName')]",
-      "type": "Microsoft.Network/virtualNetworkGateways",
-      "location": "[parameters('secondaryLocation')]",
+      "name": "[concat(variables('nvaVmNicName'), copyIndex(1))]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nvaNicCopy",
+        "count": "[length(parameters('locations'))]"
+      },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[concat('Microsoft.Network/publicIPAddresses/', variables('secondaryGatewayPublicIpName'))]",
-        "[concat('Microsoft.Network/virtualNetworks/', variables('secondaryVnetName'))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('vnetName'), copyIndex(1)))]"
       ],
       "properties": {
         "ipConfigurations": [
           {
+            "name": "[concat(variables('nvaVmNicName'), copyIndex(1), 'ipconfig')]",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('secondaryVnetName')), '/subnets/GatewaySubnet')]"
-              },
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('secondaryGatewayPublicIpName'))]"
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('vnetName'), copyIndex(1))), '/subnets/NvaSubnet')]"
               }
-            },
-            "name": "vnetGatewayConfig"
+            }
           }
         ],
-        "sku": {
-          "name": "[variables('gatewaySku')]",
-          "tier": "[variables('gatewaySku')]"
-        },
-        "gatewayType": "Vpn",
-        "vpnType": "RouteBased",
-        "enableBgp": "false"
+        "enableIPForwarding": true
       }
     },
     {
-      "name": "[variables('primaryNvaVmNicName')]",
+      "name": "[concat(variables('jumpVmNicName'), copyIndex(1))]",
       "type": "Microsoft.Network/networkInterfaces",
-      "location": "[parameters('primaryLocation')]",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "jumpNicCopy",
+        "count": "[length(parameters('locations'))]"
+      },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/', variables('primaryVnetName'))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('vnetName'), copyIndex(1)))]"
       ],
       "properties": {
         "ipConfigurations": [
           {
-            "name": "[concat(variables('primaryNvaVmNicName'), 'ipconfig')]",
+            "name": "[concat(variables('jumpVmNicName'), copyIndex(1), 'ipconfig')]",
             "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(variables('jumpVmPublicIpName'), copyIndex(1)))]"
+              },
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('primaryVnetName')), '/subnets/NvaSubnet')]"
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('vnetName'), copyIndex(1))), '/subnets/NvaSubnet')]"
               }
             }
           }
@@ -310,86 +248,24 @@
       }
     },
     {
-      "name": "[variables('secondaryNvaVmNicName')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "location": "[parameters('secondaryLocation')]",
-      "apiVersion": "2016-03-30",
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/', variables('secondaryVnetName'))]"
-      ],
-      "properties": {
-        "ipConfigurations": [
-          {
-            "name": "[concat(variables('secondaryNvaVmNicName'), 'ipconfig')]",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('secondaryVnetName')), '/subnets/NvaSubnet')]"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "[variables('primaryJumpVmNicName')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "location": "[parameters('primaryLocation')]",
-      "apiVersion": "2016-03-30",
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/', variables('primaryVnetName'))]"
-      ],
-      "properties": {
-        "ipConfigurations": [
-          {
-            "name": "[concat(variables('primaryJumpVmNicName'), 'ipconfig')]",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('primaryVnetName')), '/subnets/NvaSubnet')]"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "[variables('secondaryJumpVmNicName')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "location": "[parameters('secondaryLocation')]",
-      "apiVersion": "2016-03-30",
-      "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/', variables('secondaryVnetName'))]"
-      ],
-      "properties": {
-        "ipConfigurations": [
-          {
-            "name": "[concat(variables('secondaryJumpVmNicName'), 'ipconfig')]",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('secondaryVnetName')), '/subnets/NvaSubnet')]"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "[variables('primaryNvaVmName')]",
+      "name": "[concat(variables('nvaVmName'), copyIndex(1))]",
       "type": "Microsoft.Compute/virtualMachines",
-      "location": "[parameters('primaryLocation')]",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nvaVmCopy",
+        "count": "[length(parameters('locations'))]"
+      },
       "apiVersion": "2015-06-15",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/', variables('primaryVhdStorageName'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces/', variables('primaryNvaVmNicName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('nvaVmNicName'), copyIndex(1)))]"
       ],
       "properties": {
         "hardwareProfile": {
           "vmSize": "[variables('vmSize')]"
         },
         "osProfile": {
-          "computerName": "[variables('primaryNvaVmName')]",
+          "computerName": "[concat(variables('nvaVmName'), copyIndex(1))]",
           "adminUsername": "[parameters('adminUsername')]",
           "adminPassword": "[parameters('adminPassword')]"
         },
@@ -403,7 +279,7 @@
           "osDisk": {
             "name": "osdisk",
             "vhd": {
-              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('primaryVhdStorageName'))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('primaryNvaVmName'), '-osdisk.vhd')]"
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('nvaVmName'), copyIndex(1), '-osdisk.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -412,33 +288,38 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('primaryNvaVmNicName'))]"
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nvaVmNicName'), copyIndex(1)))]"
             }
           ]
         },
         "diagnosticsProfile": {
           "bootDiagnostics": {
             "enabled": "true",
-            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('primaryDiagStorageName'))).primaryEndpoints.blob]"
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1)))).primaryEndpoints.blob]"
           }
         }
       }
     },
     {
-      "name": "[variables('secondaryNvaVmName')]",
+      "name": "[concat(variables('jumpVmName'), copyIndex(1))]",
       "type": "Microsoft.Compute/virtualMachines",
-      "location": "[parameters('secondaryLocation')]",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "jumpVmCopy",
+        "count": "[length(parameters('locations'))]"
+      },
       "apiVersion": "2015-06-15",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryVhdStorageName'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces/', variables('secondaryNvaVmNicName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('jumpVmNicName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/publicIPAddresses/', concat(variables('jumpVmPublicIpName'), copyIndex(1)))]"
       ],
       "properties": {
         "hardwareProfile": {
           "vmSize": "[variables('vmSize')]"
         },
         "osProfile": {
-          "computerName": "[variables('secondaryNvaVmName')]",
+          "computerName": "[concat(variables('jumpVmName'), copyIndex(1))]",
           "adminUsername": "[parameters('adminUsername')]",
           "adminPassword": "[parameters('adminPassword')]"
         },
@@ -452,7 +333,7 @@
           "osDisk": {
             "name": "osdisk",
             "vhd": {
-              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryVhdStorageName'))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('secondaryNvaVmName'), '-osdisk.vhd')]"
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('jumpVmName'), copyIndex(1), '-osdisk.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -461,112 +342,14 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('secondaryNvaVmNicName'))]"
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('jumpVmNicName'), copyIndex(1)))]"
             }
           ]
         },
         "diagnosticsProfile": {
           "bootDiagnostics": {
             "enabled": "true",
-            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryDiagStorageName'))).primaryEndpoints.blob]"
-          }
-        }
-      }
-    },
-    {
-      "name": "[variables('primaryJumpVmName')]",
-      "type": "Microsoft.Compute/virtualMachines",
-      "location": "[parameters('primaryLocation')]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/', variables('primaryVhdStorageName'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces/', variables('primaryJumpVmNicName'))]"
-      ],
-      "properties": {
-        "hardwareProfile": {
-          "vmSize": "[variables('vmSize')]"
-        },
-        "osProfile": {
-          "computerName": "[variables('primaryJumpVmName')]",
-          "adminUsername": "[parameters('adminUsername')]",
-          "adminPassword": "[parameters('adminPassword')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "[variables('vmImagePublisher')]",
-            "offer": "[variables('vmImageOffer')]",
-            "sku": "[variables('vmWindowsOSVersion')]",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "osdisk",
-            "vhd": {
-              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('primaryVhdStorageName'))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('primaryJumpVmName'), '-osdisk.vhd')]"
-            },
-            "caching": "ReadWrite",
-            "createOption": "FromImage"
-          }
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('primaryJumpVmNicName'))]"
-            }
-          ]
-        },
-        "diagnosticsProfile": {
-          "bootDiagnostics": {
-            "enabled": "true",
-            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('primaryDiagStorageName'))).primaryEndpoints.blob]"
-          }
-        }
-      }
-    },
-    {
-      "name": "[variables('secondaryJumpVmName')]",
-      "type": "Microsoft.Compute/virtualMachines",
-      "location": "[parameters('secondaryLocation')]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryVhdStorageName'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces/', variables('secondaryJumpVmNicName'))]"
-      ],
-      "properties": {
-        "hardwareProfile": {
-          "vmSize": "[variables('vmSize')]"
-        },
-        "osProfile": {
-          "computerName": "[variables('secondaryJumpVmName')]",
-          "adminUsername": "[parameters('adminUsername')]",
-          "adminPassword": "[parameters('adminPassword')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "[variables('vmImagePublisher')]",
-            "offer": "[variables('vmImageOffer')]",
-            "sku": "[variables('vmWindowsOSVersion')]",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "osdisk",
-            "vhd": {
-              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryVhdStorageName'))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('secondaryJumpVmName'), '-osdisk.vhd')]"
-            },
-            "caching": "ReadWrite",
-            "createOption": "FromImage"
-          }
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('secondaryJumpVmNicName'))]"
-            }
-          ]
-        },
-        "diagnosticsProfile": {
-          "bootDiagnostics": {
-            "enabled": "true",
-            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryDiagStorageName'))).primaryEndpoints.blob]"
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1)))).primaryEndpoints.blob]"
           }
         }
       }

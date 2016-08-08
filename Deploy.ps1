@@ -5,8 +5,8 @@ Select-AzureRmSubscription -SubscriptionName "Microsoft"
 New-AzureRmResourceGroup -Name $coreRg -Location northeurope
 New-AzureRmResourceGroupDeployment -DeploymentName $coreRg -ResourceGroupName $coreRg -TemplateFile ".\CoreNetwork.json" -TemplateParameterObject @{
     "namePrefix" = $rgPrefix;
-    "primaryLocation" = "northeurope";
-    "secondaryLocation" = "westeurope";
+    "locations" = @("northeurope", "westeurope");
+    "locationVnetPrefixes" = @("10.0.", "10.1.");
     "adminUsername" = "Rupert";
     "adminPassword" = "P@55W0rd123!"
 }
