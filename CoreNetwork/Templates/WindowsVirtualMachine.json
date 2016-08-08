@@ -64,7 +64,11 @@
     "secondaryVnetNvaSubnet": "10.1.1.0/24",
 
     "primaryGatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwippri')]",
-    "secondaryGatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwipsec')]"
+    "secondaryGatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwipsec')]",
+
+    "primaryGatewayName": "[concat(parameters('namePrefix'), 'gwpri')]",
+    "secondaryGatewayName": "[concat(parameters('namePrefix'), 'gwsec')]",
+    "gatewaySku": "Standard"
   },
   "resources": [
     {
@@ -193,6 +197,72 @@
         "apiVersion": "[variables('apiVersion')]",
         "properties": {
           "publicIPAllocationMethod": "Dynamic"
+        }
+      },
+      {
+        "name": "[variables('primaryGatewayName')]",
+        "type": "Microsoft.Network/virtualNetworkGateways",
+        "location": "[parameters('primaryLocation')]",
+        "apiVersion": "[variables('apiVersion')]",
+        "dependsOn": [
+          "[concat('Microsoft.Network/publicIPAddresses/', variables('primaryGatewayPublicIpName'))]",
+          "[concat('Microsoft.Network/virtualNetworks/', variables('primaryVnetName'))]"
+        ],
+        "properties": {
+          "ipConfigurations": [
+            {
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "subnet": {
+                  "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('primaryVnetName')), '/subnets/GatewaySubnet')]",
+                },
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('primaryGatewayPublicIpName'))]"
+                }
+              },
+              "name": "vnetGatewayConfig"
+            }
+          ],
+          "sku": {
+            "name": "[variables('gatewaySku')]",
+            "tier": "[variables('gatewaySku')]"
+          },
+          "gatewayType": "Vpn",
+          "vpnType": "RouteBased",
+          "enableBgp": "false"
+        }
+      },
+      {
+        "name": "[variables('secondaryGatewayName')]",
+        "type": "Microsoft.Network/virtualNetworkGateways",
+        "location": "[parameters('secondaryLocation')]",
+        "apiVersion": "[variables('apiVersion')]",
+        "dependsOn": [
+          "[concat('Microsoft.Network/publicIPAddresses/', variables('secondaryGatewayPublicIpName'))]",
+          "[concat('Microsoft.Network/virtualNetworks/', variables('secondaryVnetName'))]"
+        ],
+        "properties": {
+          "ipConfigurations": [
+            {
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "subnet": {
+                  "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('secondaryVnetName')), '/subnets/GatewaySubnet')]",
+                },
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('secondaryGatewayPublicIpName'))]"
+                }
+              },
+              "name": "vnetGatewayConfig"
+            }
+          ],
+          "sku": {
+            "name": "[variables('gatewaySku')]",
+            "tier": "[variables('gatewaySku')]"
+          },
+          "gatewayType": "Vpn",
+          "vpnType": "RouteBased",
+          "enableBgp": "false"
         }
       }
   ]
