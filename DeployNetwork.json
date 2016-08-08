@@ -1,0 +1,196 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "namePrefix": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "The prefix to add to each resource name."
+      }
+    },
+    "locations": {
+      "type": "array",
+      "metadata": {
+        "description": "The list of locations to deploy to."
+      }
+    },
+    "locationVnetPrefixes": {
+      "type": "array",
+      "metadata": {
+        "description": "The list of vnet prefixes to use in each location."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "The administrative username to use for virtual machines."
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "minLength": 8,
+      "metadata": {
+        "description": "The administrative password to use for virtual machines."
+      }
+    }
+  },
+  "variables": {
+    // Storage
+    "vhdStorageName": "[concat(parameters('namePrefix'), 'vhd')]",
+    "vhdStorageType": "Standard_LRS",
+    "vhdContainerName": "vhds",
+    "diagStorageName": "[concat(parameters('namePrefix'), 'diag')]",
+    "diagStorageType": "Standard_LRS",
+    // Vnets
+    "vnetName": "[concat(parameters('namePrefix'), 'vnet')]",
+    "vnetAddressSuffix": "0.0/16",
+    "vnetSubnetSuffix": "1.0/24",
+    // NICs
+    "vmNicName": "[concat(parameters('namePrefix'), 'nic')]",
+    // VMs
+    "vmName": "[concat(parameters('namePrefix'), 'vm')]",
+    "vmSize": "Standard_F1",
+    "vmImagePublisher": "MicrosoftWindowsServer",
+    "vmImageOffer": "WindowsServer",
+    "vmWindowsOSVersion": "2012-R2-Datacenter"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[concat(variables('vhdStorageName'), copyIndex(1))]",
+      "apiVersion": "2016-01-01",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "vhdStorageCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "sku": {
+        "name": "[variables('vhdStorageType')]"
+      },
+      "kind": "Storage",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[concat(variables('diagStorageName'), copyIndex(1))]",
+      "apiVersion": "2016-01-01",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "diagStorageCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "sku": {
+        "name": "[variables('diagStorageType')]"
+      },
+      "kind": "Storage",
+      "properties": {}
+    },
+    {
+      "name": "[concat(variables('vnetName'), copyIndex(1))]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "vnetCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[concat(parameters('locationVnetPrefixes')[copyIndex()], variables('vnetAddressSuffix'))]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "Subnet",
+            "properties": {
+              "addressPrefix": "[concat(parameters('locationVnetPrefixes')[copyIndex()], variables('vnetSubnetSuffix'))]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat(variables('vmNicName'), copyIndex(1))]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nvaNicCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('vnetName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('vmNicName'), copyIndex(1), 'ipconfig')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('vnetName'), copyIndex(1))), '/subnets/Subnet')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat(variables('vmName'), copyIndex(1))]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nvaVmCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('vmNicName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(variables('vmName'), copyIndex(1))]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('vmImagePublisher')]",
+            "offer": "[variables('vmImageOffer')]",
+            "sku": "[variables('vmWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('vmName'), copyIndex(1), '-osdisk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('vmNicName'), copyIndex(1)))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1)))).primaryEndpoints.blob]"
+          }
+        }
+      }
+    }
+  ]
+}

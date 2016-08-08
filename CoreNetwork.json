@@ -5,7 +5,6 @@
     "namePrefix": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 6,
       "metadata": {
         "description": "The prefix to add to each resource name."
       }
@@ -57,8 +56,8 @@
     "nvaVmNicName": "[concat(parameters('namePrefix'), 'nvanic')]",
     "jumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnic')]",
     // VMs
-    "nvaVmName": "[concat(parameters('namePrefix'), 'nvavm')]",
-    "jumpVmName": "[concat(parameters('namePrefix'), 'jumpvm')]",
+    "nvaVmName": "[concat(parameters('namePrefix'), 'nva')]",
+    "jumpVmName": "[concat(parameters('namePrefix'), 'jump')]",
     "jumpVmPublicIpName": "[concat(parameters('namePrefix'), 'jumpvmip')]",
     "vmSize": "Standard_F1",
     "vmImagePublisher": "MicrosoftWindowsServer",
