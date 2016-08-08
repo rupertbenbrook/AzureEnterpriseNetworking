@@ -50,6 +50,7 @@
     "primaryVhdStorageName": "[concat(parameters('namePrefix'), 'vhdpri')]",
     "secondaryVhdStorageName": "[concat(parameters('namePrefix'), 'vhdsec')]",
     "vhdStorageType": "Standard_LRS",
+    "vhdContainerName": "vhds",
     "primaryDiagStorageName": "[concat(parameters('namePrefix'), 'diagpri')]",
     "secondaryDiagStorageName": "[concat(parameters('namePrefix'), 'diagsec')]",
     "diagStorageType": "Standard_LRS",
@@ -72,7 +73,16 @@
     "primaryNvaVmNicName": "[concat(parameters('namePrefix'), 'nvanicpri')]",
     "secondaryNvaVmNicName": "[concat(parameters('namePrefix'), 'nvanicsec')]",
     "primaryJumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnicpri')]",
-    "secondaryJumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnicsec')]"
+    "secondaryJumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnicsec')]",
+    // VMs
+    "primaryNvaVmName": "[concat(parameters('namePrefix'), 'nvavmpri')]",
+    "secondaryNvaVmName": "[concat(parameters('namePrefix'), 'nvavmsec')]",
+    "primaryJumpVmName": "[concat(parameters('namePrefix'), 'jumpvmpri')]",
+    "secondaryJumpVmName": "[concat(parameters('namePrefix'), 'jumpvmsec')]",
+    "vmSize": "Standard_F1",
+    "vmImagePublisher": "MicrosoftWindowsServer",
+    "vmImageOffer": "WindowsServer",
+    "vmWindowsOSVersion": "2012-R2-Datacenter"
   },
   "resources": [
     {
@@ -87,8 +97,7 @@
         "name": "[variables('vhdStorageType')]"
       },
       "kind": "Storage",
-      "properties": {
-      }
+      "properties": {}
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
@@ -102,8 +111,7 @@
         "name": "[variables('vhdStorageType')]"
       },
       "kind": "Storage",
-      "properties": {
-      }
+      "properties": {}
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
@@ -117,8 +125,7 @@
         "name": "[variables('diagStorageType')]"
       },
       "kind": "Storage",
-      "properties": {
-      }
+      "properties": {}
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
@@ -132,8 +139,7 @@
         "name": "[variables('diagStorageType')]"
       },
       "kind": "Storage",
-      "properties": {
-      }
+      "properties": {}
     },
     {
       "name": "[variables('primaryVnetName')]",
@@ -367,6 +373,202 @@
             }
           }
         ]
+      }
+    },
+    {
+      "name": "[variables('primaryNvaVmName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[parameters('primaryLocation')]",
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('primaryVhdStorageName'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', variables('primaryNvaVmNicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('primaryNvaVmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('vmImagePublisher')]",
+            "offer": "[variables('vmImageOffer')]",
+            "sku": "[variables('vmWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('primaryVhdStorageName'))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('primaryNvaVmName'), '-osdisk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('primaryNvaVmNicName'))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('primaryDiagStorageName'))).primaryEndpoints.blob]"
+          }
+        }
+      }
+    },
+    {
+      "name": "[variables('secondaryNvaVmName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[parameters('secondaryLocation')]",
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryVhdStorageName'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', variables('secondaryNvaVmNicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('secondaryNvaVmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('vmImagePublisher')]",
+            "offer": "[variables('vmImageOffer')]",
+            "sku": "[variables('vmWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryVhdStorageName'))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('secondaryNvaVmName'), '-osdisk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('secondaryNvaVmNicName'))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryDiagStorageName'))).primaryEndpoints.blob]"
+          }
+        }
+      }
+    },
+    {
+      "name": "[variables('primaryJumpVmName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[parameters('primaryLocation')]",
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('primaryVhdStorageName'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', variables('primaryJumpVmNicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('primaryJumpVmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('vmImagePublisher')]",
+            "offer": "[variables('vmImageOffer')]",
+            "sku": "[variables('vmWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('primaryVhdStorageName'))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('primaryJumpVmName'), '-osdisk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('primaryJumpVmNicName'))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('primaryDiagStorageName'))).primaryEndpoints.blob]"
+          }
+        }
+      }
+    },
+    {
+      "name": "[variables('secondaryJumpVmName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[parameters('secondaryLocation')]",
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryVhdStorageName'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', variables('secondaryJumpVmNicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[variables('secondaryJumpVmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('vmImagePublisher')]",
+            "offer": "[variables('vmImageOffer')]",
+            "sku": "[variables('vmWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryVhdStorageName'))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('secondaryJumpVmName'), '-osdisk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('secondaryJumpVmNicName'))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('secondaryDiagStorageName'))).primaryEndpoints.blob]"
+          }
+        }
       }
     }
   ]
