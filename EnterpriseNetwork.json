@@ -131,7 +131,6 @@
         "count": "[length(parameters('locations'))]"
       },
       "apiVersion": "2016-03-30",
-      "dependsOn": [],
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -163,7 +162,6 @@
         "count": "[length(parameters('locations'))]"
       },
       "apiVersion": "2016-03-30",
-      "dependsOn": [],
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -189,7 +187,6 @@
         "count": "[length(parameters('locations'))]"
       },
       "apiVersion": "2016-03-30",
-      "dependsOn": [],
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -204,6 +201,100 @@
             }
           }
         ]
+      }
+    },
+    {
+      "name": "[concat(variables('coreVnetName'), copyIndex(1), '/peer-', variables('liveVnetName'), copyIndex(1))]",
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "coreLivePeeringCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-06-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('liveVnetName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": true,
+        "useRemoteGateways": false,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(variables('liveVnetName'), copyIndex(1)))]"
+        }
+      }
+    },
+    {
+      "name": "[concat(variables('liveVnetName'), copyIndex(1), '/peer-', variables('coreVnetName'), copyIndex(1))]",
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "liveCorePeeringCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-06-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('liveVnetName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/virtualNetworkGateways/', concat(variables('gatewayName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": false,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": true,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(variables('coreVnetName'), copyIndex(1)))]"
+        }
+      }
+    },
+    {
+      "name": "[concat(variables('coreVnetName'), copyIndex(1), '/peer-', variables('nonLiveVnetName'), copyIndex(1))]",
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "coreNonLivePeeringCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-06-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('nonLiveVnetName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": true,
+        "allowGatewayTransit": true,
+        "useRemoteGateways": false,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(variables('nonLiveVnetName'), copyIndex(1)))]"
+        }
+      }
+    },
+    {
+      "name": "[concat(variables('nonLiveVnetName'), copyIndex(1), '/peer-', variables('coreVnetName'), copyIndex(1))]",
+      "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nonLiveCorePeeringCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-06-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('nonLiveVnetName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/virtualNetworkGateways/', concat(variables('gatewayName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "allowVirtualNetworkAccess": true,
+        "allowForwardedTraffic": false,
+        "allowGatewayTransit": false,
+        "useRemoteGateways": true,
+        "remoteVirtualNetwork": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworks', concat(variables('coreVnetName'), copyIndex(1)))]"
+        }
       }
     },
     {
@@ -533,7 +624,7 @@
               "storageAccountEndPoint": "https://core.windows.net"
             }
           }
-        }/*,
+        } /*,
         {
           "name": "scripttest",
           "type": "extensions",
@@ -639,7 +730,7 @@
         }
       ]
     },
-        {
+    {
       "name": "[concat(variables('nonLiveVmName'), copyIndex(1))]",
       "type": "Microsoft.Compute/virtualMachines",
       "location": "[parameters('locations')[copyIndex()]]",
