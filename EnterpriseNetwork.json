@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
@@ -15,10 +15,22 @@
         "description": "The list of locations to deploy to."
       }
     },
-    "locationVnetPrefixes": {
+    "coreLocationVnetPrefixes": {
       "type": "array",
       "metadata": {
-        "description": "The list of vnet prefixes to use in each location."
+        "description": "The list of core vnet prefixes to use in each location."
+      }
+    },
+    "liveLocationVnetPrefixes": {
+      "type": "array",
+      "metadata": {
+        "description": "The list of live vnet prefixes to use in each location."
+      }
+    },
+    "nonLiveLocationVnetPrefixes": {
+      "type": "array",
+      "metadata": {
+        "description": "The list of non-live vnet prefixes to use in each location."
       }
     },
     "adminUsername": {
@@ -44,10 +56,14 @@
     "diagStorageName": "[concat(parameters('namePrefix'), 'diag')]",
     "diagStorageType": "Standard_LRS",
     // Vnets
-    "vnetName": "[concat(parameters('namePrefix'), 'vnet')]",
+    "coreVnetName": "[concat(parameters('namePrefix'), 'corevnet')]",
+    "liveVnetName": "[concat(parameters('namePrefix'), 'livevnet')]",
+    "nonLiveVnetName": "[concat(parameters('namePrefix'), 'nonlivevnet')]",
     "vnetAddressSuffix": "0.0/16",
-    "vnetGatewaySubnetSuffix": "0.0/24",
-    "vnetNvaSubnetSuffix": "1.0/24",
+    "coreVnetGatewaySubnetSuffix": "0.0/24",
+    "coreVnetNvaSubnetSuffix": "1.0/24",
+    "liveVnetNvaSubnetSuffix": "1.0/24",
+    "nonLiveVnetNvaSubnetSuffix": "1.0/24",
     // Gateways
     "gatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwip')]",
     "gatewayName": "[concat(parameters('namePrefix'), 'gw')]",
@@ -55,9 +71,13 @@
     // NICs
     "nvaVmNicName": "[concat(parameters('namePrefix'), 'nvanic')]",
     "jumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnic')]",
+    "liveVmNicName": "[concat(parameters('namePrefix'), 'livenic')]",
+    "nonLiveVmNicName": "[concat(parameters('namePrefix'), 'nonlivenic')]",
     // VMs
     "nvaVmName": "[concat(parameters('namePrefix'), 'nva')]",
     "jumpVmName": "[concat(parameters('namePrefix'), 'jump')]",
+    "liveVmName": "[concat(parameters('namePrefix'), 'live')]",
+    "nonLiveVmName": "[concat(parameters('namePrefix'), 'nlive')]",
     "jumpVmPublicIpName": "[concat(parameters('namePrefix'), 'jumpvmip')]",
     "vmSize": "Standard_F1",
     "vmImagePublisher": "MicrosoftWindowsServer",
@@ -103,11 +123,11 @@
       "properties": {}
     },
     {
-      "name": "[concat(variables('vnetName'), copyIndex(1))]",
+      "name": "[concat(variables('coreVnetName'), copyIndex(1))]",
       "type": "Microsoft.Network/virtualNetworks",
       "location": "[parameters('locations')[copyIndex()]]",
       "copy": {
-        "name": "vnetCopy",
+        "name": "coreVnetCopy",
         "count": "[length(parameters('locations'))]"
       },
       "apiVersion": "2016-03-30",
@@ -115,20 +135,72 @@
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
-            "[concat(parameters('locationVnetPrefixes')[copyIndex()], variables('vnetAddressSuffix'))]"
+            "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('vnetAddressSuffix'))]"
           ]
         },
         "subnets": [
           {
             "name": "GatewaySubnet",
             "properties": {
-              "addressPrefix": "[concat(parameters('locationVnetPrefixes')[copyIndex()], variables('vnetGatewaySubnetSuffix'))]"
+              "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetGatewaySubnetSuffix'))]"
             }
           },
           {
             "name": "NvaSubnet",
             "properties": {
-              "addressPrefix": "[concat(parameters('locationVnetPrefixes')[copyIndex()], variables('vnetNvaSubnetSuffix'))]"
+              "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat(variables('liveVnetName'), copyIndex(1))]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "liveVnetCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('vnetAddressSuffix'))]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "Subnet",
+            "properties": {
+              "addressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetNvaSubnetSuffix'))]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat(variables('nonLiveVnetName'), copyIndex(1))]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nonLiveVnetCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('vnetAddressSuffix'))]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "Subnet",
+            "properties": {
+              "addressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetNvaSubnetSuffix'))]"
             }
           }
         ]
@@ -147,7 +219,6 @@
         "publicIPAllocationMethod": "Dynamic"
       }
     },
-    /*
     {
       "name": "[concat(variables('gatewayPublicIpName'), copyIndex(1))]",
       "type": "Microsoft.Network/publicIPAddresses",
@@ -172,7 +243,7 @@
       "apiVersion": "2016-03-30",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', variables('gatewayPublicIpName'), copyIndex(1))]",
-        "[concat('Microsoft.Network/virtualNetworks/', variables('vnetName'), copyIndex(1))]"
+        "[concat('Microsoft.Network/virtualNetworks/', variables('coreVnetName'), copyIndex(1))]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -180,7 +251,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('vnetName'), copyIndex(1))), '/subnets/GatewaySubnet')]"
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('coreVnetName'), copyIndex(1))), '/subnets/GatewaySubnet')]"
               },
               "publicIPAddress": {
                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(variables('gatewayPublicIpName'), copyIndex(1)))]"
@@ -198,7 +269,6 @@
         "enableBgp": "false"
       }
     },
-    */
     {
       "name": "[concat(variables('nvaVmNicName'), copyIndex(1))]",
       "type": "Microsoft.Network/networkInterfaces",
@@ -209,7 +279,7 @@
       },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('vnetName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -218,7 +288,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('vnetName'), copyIndex(1))), '/subnets/NvaSubnet')]"
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('coreVnetName'), copyIndex(1))), '/subnets/NvaSubnet')]"
               }
             }
           }
@@ -236,7 +306,7 @@
       },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('vnetName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -248,7 +318,59 @@
               },
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('vnetName'), copyIndex(1))), '/subnets/NvaSubnet')]"
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('coreVnetName'), copyIndex(1))), '/subnets/NvaSubnet')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat(variables('liveVmNicName'), copyIndex(1))]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "liveNicCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('liveVnetName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('liveVmNicName'), copyIndex(1), 'ipconfig')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('liveVnetName'), copyIndex(1))), '/subnets/Subnet')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat(variables('nonLiveVmNicName'), copyIndex(1))]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nonLiveNicCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('nonLiveVnetName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[concat(variables('nonLiveVmNicName'), copyIndex(1), 'ipconfig')]",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('nonLiveVnetName'), copyIndex(1))), '/subnets/Subnet')]"
               }
             }
           }
@@ -436,6 +558,164 @@
             }
           }
         }*/
+      ]
+    },
+    {
+      "name": "[concat(variables('liveVmName'), copyIndex(1))]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "liveVmCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('liveVmNicName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(variables('liveVmName'), copyIndex(1))]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('vmImagePublisher')]",
+            "offer": "[variables('vmImageOffer')]",
+            "sku": "[variables('vmWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('liveVmName'), copyIndex(1), '-osdisk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('liveVmNicName'), copyIndex(1)))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1)))).primaryEndpoints.blob]"
+          }
+        }
+      },
+      "resources": [
+        {
+          "name": "Microsoft.Insights.VMDiagnosticsSettings",
+          "type": "extensions",
+          "location": "[parameters('locations')[copyIndex()]]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', concat(variables('liveVmName'), copyIndex(1)))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Azure.Diagnostics",
+            "type": "IaaSDiagnostics",
+            "typeHandlerVersion": "1.5",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "xmlCfg": "[base64(concat(variables('wadcfgxstart'), variables('wadmetricsresourceid'), concat(variables('liveVmName'), copyIndex(1)), variables('wadcfgxend')))]",
+              "storageAccount": "[concat(variables('diagStorageName'), copyIndex(1))]"
+            },
+            "protectedSettings": {
+              "storageAccountName": "[concat(variables('diagStorageName'), copyIndex(1))]",
+              "storageAccountKey": "[listkeys(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1))), '2015-06-15').key1]",
+              "storageAccountEndPoint": "https://core.windows.net"
+            }
+          }
+        }
+      ]
+    },
+        {
+      "name": "[concat(variables('nonLiveVmName'), copyIndex(1))]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nonLiveVmCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('nonLiveVmNicName'), copyIndex(1)))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(variables('nonLiveVmName'), copyIndex(1))]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('vmImagePublisher')]",
+            "offer": "[variables('vmImageOffer')]",
+            "sku": "[variables('vmWindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))).primaryEndpoints.blob, variables('vhdContainerName'), '/', variables('nonLiveVmName'), copyIndex(1), '-osdisk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nonLiveVmNicName'), copyIndex(1)))]"
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "true",
+            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1)))).primaryEndpoints.blob]"
+          }
+        }
+      },
+      "resources": [
+        {
+          "name": "Microsoft.Insights.VMDiagnosticsSettings",
+          "type": "extensions",
+          "location": "[parameters('locations')[copyIndex()]]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', concat(variables('nonLiveVmName'), copyIndex(1)))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Azure.Diagnostics",
+            "type": "IaaSDiagnostics",
+            "typeHandlerVersion": "1.5",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "xmlCfg": "[base64(concat(variables('wadcfgxstart'), variables('wadmetricsresourceid'), concat(variables('nonLiveVmName'), copyIndex(1)), variables('wadcfgxend')))]",
+              "storageAccount": "[concat(variables('diagStorageName'), copyIndex(1))]"
+            },
+            "protectedSettings": {
+              "storageAccountName": "[concat(variables('diagStorageName'), copyIndex(1))]",
+              "storageAccountKey": "[listkeys(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1))), '2015-06-15').key1]",
+              "storageAccountEndPoint": "https://core.windows.net"
+            }
+          }
+        }
       ]
     }
   ]
