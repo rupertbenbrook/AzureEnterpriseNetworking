@@ -1,5 +1,5 @@
-﻿$timestamp = [int]((Get-Date).Subtract([datetime]"2016-08-08 00:00:00").TotalMinutes / 2)
-$rgPrefix = "rb" + $timestamp   
+﻿#$timestamp = [int]((Get-Date).Subtract([datetime]"2016-08-08 00:00:00").TotalMinutes / 2)
+$rgPrefix = "rbpeer" # + $timestamp   
 $rgPrefix
 Select-AzureRmSubscription -SubscriptionName "Microsoft"
 New-AzureRmResourceGroup -Name $rgPrefix -Location "northeurope"

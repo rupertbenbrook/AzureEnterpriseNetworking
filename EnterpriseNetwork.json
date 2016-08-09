@@ -204,7 +204,7 @@
       }
     },
     {
-      "name": "[concat(variables('coreVnetName'), copyIndex(1), '/peer-', variables('liveVnetName'), copyIndex(1))]",
+      "name": "[concat(variables('coreVnetName'), copyIndex(1), '/peerToLive')]",
       "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
       "location": "[parameters('locations')[copyIndex()]]",
       "copy": {
@@ -227,7 +227,7 @@
       }
     },
     {
-      "name": "[concat(variables('liveVnetName'), copyIndex(1), '/peer-', variables('coreVnetName'), copyIndex(1))]",
+      "name": "[concat(variables('liveVnetName'), copyIndex(1), '/peerToCore')]",
       "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
       "location": "[parameters('locations')[copyIndex()]]",
       "copy": {
@@ -251,7 +251,7 @@
       }
     },
     {
-      "name": "[concat(variables('coreVnetName'), copyIndex(1), '/peer-', variables('nonLiveVnetName'), copyIndex(1))]",
+      "name": "[concat(variables('coreVnetName'), copyIndex(1), '/peerToNonLive')]",
       "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
       "location": "[parameters('locations')[copyIndex()]]",
       "copy": {
@@ -274,7 +274,7 @@
       }
     },
     {
-      "name": "[concat(variables('nonLiveVnetName'), copyIndex(1), '/peer-', variables('coreVnetName'), copyIndex(1))]",
+      "name": "[concat(variables('nonLiveVnetName'), copyIndex(1), '/peerToCore')]",
       "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
       "location": "[parameters('locations')[copyIndex()]]",
       "copy": {
