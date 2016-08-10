@@ -68,6 +68,9 @@
     "gatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwip')]",
     "gatewayName": "[concat(parameters('namePrefix'), 'gw')]",
     "gatewaySku": "Standard",
+    // Connections
+    "connectionName": "[concat(parameters('namePrefix'), 'connect')]",
+    "sharedKey": "Eh61HBP7tO5byHzyrRDLD1l5fjFyXK",
     // NICs
     "nvaVmNicName": "[concat(parameters('namePrefix'), 'nvanic')]",
     "jumpVmNicName": "[concat(parameters('namePrefix'), 'jumpnic')]",
@@ -358,6 +361,46 @@
         "gatewayType": "Vpn",
         "vpnType": "RouteBased",
         "enableBgp": "false"
+      }
+    },
+    {
+      "name": "[concat(variables('connectionName'), copyIndex(1))]",
+      "type": "Microsoft.Network/connections",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "connectionCopy",
+        "count": "[sub(length(parameters('locations')), 1)]"
+      },
+      "apiVersion": "2016-03-30",
+      "dependsOn": ["gatewayCopy"],
+      "properties": {
+        "virtualNetworkGateway1": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', concat(variables('gatewayName'), copyIndex(1)))]"
+        },
+        "virtualNetworkGateway2": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', concat(variables('gatewayName'), copyIndex(2)))]"
+        },
+        "connectionType": "Vnet2Vnet",
+        "routingWeight": 3,
+        "sharedKey": "[variables('sharedKey')]"
+      }
+    },
+    {
+      "name": "[concat(variables('connectionName'), length(parameters('locations')))]",
+      "type": "Microsoft.Network/connections",
+      "location": "[parameters('locations')[sub(length(parameters('locations')), 1)]]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": ["gatewayCopy"],
+      "properties": {
+        "virtualNetworkGateway1": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', concat(variables('gatewayName'), length(parameters('locations'))))]"
+        },
+        "virtualNetworkGateway2": {
+          "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', concat(variables('gatewayName'), '1'))]"
+        },
+        "connectionType": "Vnet2Vnet",
+        "routingWeight": 3,
+        "sharedKey": "[variables('sharedKey')]"
       }
     },
     {
