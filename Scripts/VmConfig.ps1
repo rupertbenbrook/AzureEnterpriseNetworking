@@ -50,7 +50,7 @@ if ($result.Updates.Count -gt 0) {
     Write-Host "Installing updates..."
     $installResult = $installer.Install()
     if ($installResult.RebootRequired -eq $true) {
-        Write-Host "Rebooting"
-        Restart-Computer
+        Write-Host "Rebooting in 60 seconds"
+        Start-Job -ScriptBlock { Start-Sleep -Seconds 60; Restart-Computer }
     }
 }
