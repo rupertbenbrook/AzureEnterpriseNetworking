@@ -67,6 +67,11 @@
     "vhdContainerName": "vhds",
     "diagStorageName": "[concat(parameters('namePrefix'), 'diag')]",
     "diagStorageType": "Standard_LRS",
+    // NSGs
+    "coreGatewayNsgName": "coregwnsg",
+    "coreNvaNsgName": "corenvansg",
+    "liveSubnetNsgName": "livensg",
+    "nonLiveSubnetNsgName": "nlivensg",
     // Vnets
     "coreVnetName": "[concat(parameters('namePrefix'), 'corevnet')]",
     "liveVnetName": "[concat(parameters('namePrefix'), 'livevnet')]",
@@ -140,6 +145,58 @@
       "properties": {}
     },
     {
+      "name": "[concat(variables('coreGatewayNsgName'), copyIndex(1))]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "coreGatewayNsgCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "securityRules": []
+      }
+    },
+    {
+      "name": "[concat(variables('coreNvaNsgName'), copyIndex(1))]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "coreNvaNsgCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "securityRules": []
+      }
+    },
+    {
+      "name": "[concat(variables('liveSubnetNsgName'), copyIndex(1))]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "liveSubnetNsgCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "securityRules": []
+      }
+    },
+    {
+      "name": "[concat(variables('nonLiveSubnetNsgName'), copyIndex(1))]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nonLiveSubnetNsgCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "securityRules": []
+      }
+    },
+    {
       "name": "[concat(variables('coreVnetName'), copyIndex(1))]",
       "type": "Microsoft.Network/virtualNetworks",
       "location": "[parameters('locations')[copyIndex()]]",
@@ -148,6 +205,10 @@
         "count": "[length(parameters('locations'))]"
       },
       "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('coreGatewayNsgName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('coreNvaNsgName'), copyIndex(1)))]"
+      ],
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -158,13 +219,19 @@
           {
             "name": "GatewaySubnet",
             "properties": {
-              "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetGatewaySubnetSuffix'))]"
+              "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetGatewaySubnetSuffix'))]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('coreGatewayNsgName'), copyIndex(1)))]"
+              }
             }
           },
           {
             "name": "NvaSubnet",
             "properties": {
-              "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]"
+              "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('coreNvaNsgName'), copyIndex(1)))]"
+              }
             }
           }
         ]
@@ -179,6 +246,9 @@
         "count": "[length(parameters('locations'))]"
       },
       "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('liveSubnetNsgName'), copyIndex(1)))]"
+      ],
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -189,7 +259,10 @@
           {
             "name": "Subnet",
             "properties": {
-              "addressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetNvaSubnetSuffix'))]"
+              "addressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetNvaSubnetSuffix'))]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('liveSubnetNsgName'), copyIndex(1)))]"
+              }
             }
           }
         ]
@@ -204,6 +277,9 @@
         "count": "[length(parameters('locations'))]"
       },
       "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('nonLiveSubnetNsgName'), copyIndex(1)))]"
+      ],
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -214,7 +290,10 @@
           {
             "name": "Subnet",
             "properties": {
-              "addressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetNvaSubnetSuffix'))]"
+              "addressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetNvaSubnetSuffix'))]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('nonLiveSubnetNsgName'), copyIndex(1)))]"
+              }
             }
           }
         ]
@@ -388,7 +467,9 @@
         "count": "[sub(length(parameters('locations')), 1)]"
       },
       "apiVersion": "2016-03-30",
-      "dependsOn": ["gatewayCopy"],
+      "dependsOn": [
+        "gatewayCopy"
+      ],
       "properties": {
         "virtualNetworkGateway1": {
           "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', concat(variables('gatewayName'), copyIndex(1)))]"
@@ -406,7 +487,9 @@
       "type": "Microsoft.Network/connections",
       "location": "[parameters('locations')[sub(length(parameters('locations')), 1)]]",
       "apiVersion": "2016-03-30",
-      "dependsOn": ["gatewayCopy"],
+      "dependsOn": [
+        "gatewayCopy"
+      ],
       "properties": {
         "virtualNetworkGateway1": {
           "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', concat(variables('gatewayName'), length(parameters('locations'))))]"

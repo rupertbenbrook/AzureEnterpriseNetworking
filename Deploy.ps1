@@ -1,7 +1,7 @@
 ﻿$scriptsStorageRg = "rbcommon"
 $scriptsStorageAccount = "rbcommon"
 $scriptsStorageContainer = "scripts"
-$rgPrefix = "rbpeer4"
+$rgPrefix = "rbpeer"
 $rgLocation = "northeurope"
 $templateParameters = @{
     "namePrefix" = $rgPrefix;
