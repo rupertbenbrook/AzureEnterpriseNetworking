@@ -28,5 +28,5 @@ $templateParameters.Add("scriptsStorage", "https://$scriptsStorageAccount.blob.c
 $templateParameters.Add("scriptsSasToken", $token)
 
 # Create resource group and deploy template
-New-AzureRmResourceGroup -Name $rgPrefix -Location $rgLocation
+New-AzureRmResourceGroup -Name $rgPrefix -Location $rgLocation -ErrorAction SilentlyContinue
 New-AzureRmResourceGroupDeployment -DeploymentName $rgPrefix -ResourceGroupName $rgPrefix -TemplateFile ".\EnterpriseNetwork.json" -TemplateParameterObject $templateParameters
