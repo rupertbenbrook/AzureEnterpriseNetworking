@@ -13,13 +13,13 @@ $smartScreenKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
 Set-ItemProperty -Path $smartScreenKey -Name "SmartScreenEnabled" -Value "RequireAdmin" -Force             
 
 # Download and extract iperf
-$iperfZip = "$env:TEMP\iperf.zip"
-Invoke-WebRequest -Uri "https://iperf.fr/download/windows/iperf-3.1.3-win64.zip" -OutFile $iperfZip
-Add-Type -As System.IO.Compression.FileSystem
-$zip = [System.IO.Compression.ZipFile]::Open($iperfZip, "Read" )
-[System.IO.Compression.ZipFileExtensions]::ExtractToDirectory($zip, "C:\")
-$zip.Dispose()
-Remove-Item -Path $iperfZip -Force
+if ((Test-Path -Path "C:\iperf-*") -eq $false) {
+    $iperfZip = "$env:TEMP\iperf.zip"
+    Invoke-WebRequest -Uri "https://iperf.fr/download/windows/iperf-3.1.3-win64.zip" -OutFile $iperfZip
+    Add-Type -As System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($iperfZip, "C:\")
+    Remove-Item -Path $iperfZip -Force
+}
 
 # Allow iperf Server port
 New-NetFirewallRule -DisplayName "iPerf Server TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5201
