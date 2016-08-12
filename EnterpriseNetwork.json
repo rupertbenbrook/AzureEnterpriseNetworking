@@ -73,6 +73,7 @@
     "liveSubnetNsgName": "livensg",
     "nonLiveSubnetNsgName": "nlivensg",
     // Route Tables
+    "coreGatewayRouteTableName": "coregwroute",
     "coreNvaRouteTableName": "corenvaroute",
     "liveRouteTableName": "liveroute",
     "nonLiveRouteTableName": "nliveroute",
@@ -213,6 +214,19 @@
       }
     },
     {
+      "name": "[concat(variables('coreGatewayRouteTableName'), copyIndex(1))]",
+      "type": "Microsoft.Network/routeTables",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "coreGatewayRouteTableCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "routes": []
+      }
+    },
+    {
       "name": "[concat(variables('coreNvaRouteTableName'), copyIndex(1))]",
       "type": "Microsoft.Network/routeTables",
       "location": "[parameters('locations')[copyIndex()]]",
@@ -278,6 +292,9 @@
               "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetGatewaySubnetSuffix'))]",
               "networkSecurityGroup": {
                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('coreGatewayNsgName'), copyIndex(1)))]"
+              },
+              "routeTable": {
+                "id": "[resourceId('Microsoft.Network/routeTables', concat(variables('coreGatewayRouteTableName'), copyIndex(1)))]"
               }
             }
           },
