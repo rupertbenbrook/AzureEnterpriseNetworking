@@ -46,6 +46,18 @@
       "metadata": {
         "description": "The administrative password to use for virtual machines."
       }
+    },
+    "scriptsStorage": {
+      "type": "string",
+      "metadata": {
+        "description": "The Uri of the storage account containing scripts."
+      }
+    },
+    "scriptsSasToken": {
+      "type": "string",
+      "metadata": {
+        "description": "The storage SAS token to access the storage account containing scripts."
+      }
     }
   },
   "variables": {
@@ -86,6 +98,8 @@
     "vmImagePublisher": "MicrosoftWindowsServer",
     "vmImageOffer": "WindowsServer",
     "vmWindowsOSVersion": "2012-R2-Datacenter",
+    "vmConfigScript": "VmConfig.ps1",
+    "nvaConfigScript": "NvaConfig.ps1",
     // Diagnostics
     "wadlogs": "<WadCfg> <DiagnosticMonitorConfiguration overallQuotaInMB=\"4096\" xmlns=\"http://schemas.microsoft.com/ServiceHosting/2010/10/DiagnosticsConfiguration\"> <DiagnosticInfrastructureLogs scheduledTransferLogLevelFilter=\"Error\"/> <WindowsEventLog scheduledTransferPeriod=\"PT1M\" > <DataSource name=\"Application!*[System[(Level = 1 or Level = 2)]]\" /> <DataSource name=\"Security!*[System[(Level = 1 or Level = 2)]]\" /> <DataSource name=\"System!*[System[(Level = 1 or Level = 2)]]\" /></WindowsEventLog>",
     "wadperfcounters1": "<PerformanceCounters scheduledTransferPeriod=\"PT1M\"><PerformanceCounterConfiguration counterSpecifier=\"\\Processor(_Total)\\% Processor Time\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"CPU utilization\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Processor(_Total)\\% Privileged Time\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"CPU privileged time\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Processor(_Total)\\% User Time\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"CPU user time\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Processor Information(_Total)\\Processor Frequency\" sampleRate=\"PT15S\" unit=\"Count\"><annotation displayName=\"CPU frequency\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\System\\Processes\" sampleRate=\"PT15S\" unit=\"Count\"><annotation displayName=\"Processes\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Process(_Total)\\Thread Count\" sampleRate=\"PT15S\" unit=\"Count\"><annotation displayName=\"Threads\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Process(_Total)\\Handle Count\" sampleRate=\"PT15S\" unit=\"Count\"><annotation displayName=\"Handles\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\% Committed Bytes In Use\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"Memory usage\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\Available Bytes\" sampleRate=\"PT15S\" unit=\"Bytes\"><annotation displayName=\"Memory available\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\Committed Bytes\" sampleRate=\"PT15S\" unit=\"Bytes\"><annotation displayName=\"Memory committed\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\Commit Limit\" sampleRate=\"PT15S\" unit=\"Bytes\"><annotation displayName=\"Memory commit limit\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk(_Total)\\% Disk Time\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"Disk active time\" locale=\"en-us\"/></PerformanceCounterConfiguration>",
@@ -217,7 +231,8 @@
       "apiVersion": "2016-06-01",
       "dependsOn": [
         "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]",
-        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('liveVnetName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('liveVnetName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/virtualNetworkGateways/', concat(variables('gatewayName'), copyIndex(1)))]"
       ],
       "properties": {
         "allowVirtualNetworkAccess": true,
@@ -264,7 +279,8 @@
       "apiVersion": "2016-06-01",
       "dependsOn": [
         "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]",
-        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('nonLiveVnetName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('nonLiveVnetName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/virtualNetworkGateways/', concat(variables('gatewayName'), copyIndex(1)))]"
       ],
       "properties": {
         "allowVirtualNetworkAccess": true,
@@ -587,6 +603,28 @@
               "storageAccountEndPoint": "https://core.windows.net"
             }
           }
+        },
+        {
+          "name": "vmScript",
+          "type": "extensions",
+          "location": "[parameters('locations')[copyIndex()]]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', concat(variables('nvaVmName'), copyIndex(1)))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.4",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "fileUris": [
+                "[concat(parameters('scriptsStorage'), '/', variables('vmConfigScript'), parameters('scriptsSasToken'))]",
+                "[concat(parameters('scriptsStorage'), '/', variables('nvaConfigScript'), parameters('scriptsSasToken'))]"
+              ],
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('nvaConfigScript'))]"
+            }
+          }
         }
       ]
     },
@@ -667,18 +705,15 @@
               "storageAccountEndPoint": "https://core.windows.net"
             }
           }
-        } /*,
+        },
         {
-          "name": "scripttest",
+          "name": "vmScript",
           "type": "extensions",
           "location": "[parameters('locations')[copyIndex()]]",
           "apiVersion": "2015-06-15",
           "dependsOn": [
             "[concat('Microsoft.Compute/virtualMachines/', concat(variables('jumpVmName'), copyIndex(1)))]"
           ],
-          "tags": {
-            "displayName": "scripttest"
-          },
           "properties": {
             "publisher": "Microsoft.Compute",
             "type": "CustomScriptExtension",
@@ -686,12 +721,12 @@
             "autoUpgradeMinorVersion": true,
             "settings": {
               "fileUris": [
-                "[concat(parameters('_artifactsLocation'), '/', variables('scripttestScriptFilePath'), parameters('_artifactsLocationSasToken'))]"
+                "[concat(parameters('scriptsStorage'), '/', variables('vmConfigScript'), parameters('scriptsSasToken'))]"
               ],
-              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('scripttestScriptFilePath'))]"
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('vmConfigScript'))]"
             }
           }
-        }*/
+        }
       ]
     },
     {
@@ -768,6 +803,27 @@
               "storageAccountName": "[concat(variables('diagStorageName'), copyIndex(1))]",
               "storageAccountKey": "[listkeys(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1))), '2015-06-15').key1]",
               "storageAccountEndPoint": "https://core.windows.net"
+            }
+          }
+        },
+        {
+          "name": "vmScript",
+          "type": "extensions",
+          "location": "[parameters('locations')[copyIndex()]]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', concat(variables('liveVmName'), copyIndex(1)))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.4",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "fileUris": [
+                "[concat(parameters('scriptsStorage'), '/', variables('vmConfigScript'), parameters('scriptsSasToken'))]"
+              ],
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('vmConfigScript'))]"
             }
           }
         }
@@ -847,6 +903,27 @@
               "storageAccountName": "[concat(variables('diagStorageName'), copyIndex(1))]",
               "storageAccountKey": "[listkeys(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1))), '2015-06-15').key1]",
               "storageAccountEndPoint": "https://core.windows.net"
+            }
+          }
+        },
+        {
+          "name": "vmScript",
+          "type": "extensions",
+          "location": "[parameters('locations')[copyIndex()]]",
+          "apiVersion": "2015-06-15",
+          "dependsOn": [
+            "[concat('Microsoft.Compute/virtualMachines/', concat(variables('nonLiveVmName'), copyIndex(1)))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.4",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "fileUris": [
+                "[concat(parameters('scriptsStorage'), '/', variables('vmConfigScript'), parameters('scriptsSasToken'))]"
+              ],
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('vmConfigScript'))]"
             }
           }
         }
