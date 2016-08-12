@@ -72,6 +72,10 @@
     "coreNvaNsgName": "corenvansg",
     "liveSubnetNsgName": "livensg",
     "nonLiveSubnetNsgName": "nlivensg",
+    // Route Tables
+    "coreNvaRouteTableName": "corenvaroute",
+    "liveRouteTableName": "liveroute",
+    "nonLiveRouteTableName": "nliveroute",
     // Vnets
     "coreVnetName": "[concat(parameters('namePrefix'), 'corevnet')]",
     "liveVnetName": "[concat(parameters('namePrefix'), 'livevnet')]",
@@ -197,6 +201,45 @@
       }
     },
     {
+      "name": "[concat(variables('coreNvaRouteTableName'), copyIndex(1))]",
+      "type": "Microsoft.Network/routeTables",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "coreNvaRouteTableCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "routes": []
+      }
+    },
+    {
+      "name": "[concat(variables('liveRouteTableName'), copyIndex(1))]",
+      "type": "Microsoft.Network/routeTables",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "liveRouteTableCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "routes": []
+      }
+    },
+    {
+      "name": "[concat(variables('nonLiveRouteTableName'), copyIndex(1))]",
+      "type": "Microsoft.Network/routeTables",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "nonLiveRouteTableCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "routes": []
+      }
+    },
+    {
       "name": "[concat(variables('coreVnetName'), copyIndex(1))]",
       "type": "Microsoft.Network/virtualNetworks",
       "location": "[parameters('locations')[copyIndex()]]",
@@ -207,7 +250,8 @@
       "apiVersion": "2016-03-30",
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('coreGatewayNsgName'), copyIndex(1)))]",
-        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('coreNvaNsgName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('coreNvaNsgName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/routeTables/', concat(variables('coreNvaRouteTableName'), copyIndex(1)))]"
       ],
       "properties": {
         "addressSpace": {
@@ -231,6 +275,9 @@
               "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
               "networkSecurityGroup": {
                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('coreNvaNsgName'), copyIndex(1)))]"
+              },
+              "routeTable": {
+                "id": "[resourceId('Microsoft.Network/routeTables', concat(variables('coreNvaRouteTableName'), copyIndex(1)))]"
               }
             }
           }
@@ -247,7 +294,8 @@
       },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('liveSubnetNsgName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('liveSubnetNsgName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/routeTables/', concat(variables('liveRouteTableName'), copyIndex(1)))]"
       ],
       "properties": {
         "addressSpace": {
@@ -262,6 +310,9 @@
               "addressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetNvaSubnetSuffix'))]",
               "networkSecurityGroup": {
                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('liveSubnetNsgName'), copyIndex(1)))]"
+              },
+              "routeTable": {
+                "id": "[resourceId('Microsoft.Network/routeTables', concat(variables('liveRouteTableName'), copyIndex(1)))]"
               }
             }
           }
@@ -278,7 +329,8 @@
       },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('nonLiveSubnetNsgName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('nonLiveSubnetNsgName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/routeTables/', concat(variables('nonLiveRouteTableName'), copyIndex(1)))]"
       ],
       "properties": {
         "addressSpace": {
@@ -293,6 +345,9 @@
               "addressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetNvaSubnetSuffix'))]",
               "networkSecurityGroup": {
                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('nonLiveSubnetNsgName'), copyIndex(1)))]"
+              },
+              "routeTable": {
+                "id": "[resourceId('Microsoft.Network/routeTables', concat(variables('nonLiveRouteTableName'), copyIndex(1)))]"
               }
             }
           }
