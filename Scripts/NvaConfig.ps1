@@ -1,6 +1,9 @@
 # Install routing role on Windows
 Install-WindowsFeature -Name Routing -IncludeManagementTools
 
+# Enable forwarding on all adapters
+Get-NetAdapter | Set-NetIPInterface -Forwarding Enabled
+
 # Download and install Microsoft Message Analyzer
 # TODO: Detect install and skip
 #$mmaInstall = "$env:TEMP\MessageAnalyzer.msi"
