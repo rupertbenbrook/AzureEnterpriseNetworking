@@ -2,7 +2,7 @@
 $scriptsStorageAccount = "rbcommon"
 $scriptsStorageContainer = "scripts"
 $rgPrefix = "rbpeer"
-$deployName = $rgPrefix + (Get-Date -Format "yyyyMMddHHmmss")
+$deployName = $rgPrefix + "-" + (Get-Date -Format "yyyyMMddHHmmss")
 $rgLocation = "northeurope"
 $templateParameters = @{
     "namePrefix" = $rgPrefix;
