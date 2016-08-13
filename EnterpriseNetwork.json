@@ -83,8 +83,8 @@
     "vnetAddressSuffix": "0.0/16",
     "coreVnetGatewaySubnetSuffix": "0.0/24",
     "coreVnetNvaSubnetSuffix": "1.0/24",
-    "liveVnetNvaSubnetSuffix": "1.0/24",
-    "nonLiveVnetNvaSubnetSuffix": "1.0/24",
+    "liveVnetSubnetSuffix": "1.0/24",
+    "nonLiveVnetSubnetSuffix": "1.0/24",
     // Gateways
     "gatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwip')]",
     "gatewayName": "[concat(parameters('namePrefix'), 'gw')]",
@@ -157,17 +157,73 @@
       "properties": {
         "securityRules": [
           {
-            "name": "rdp_rule",
+            "name": "allow-rdp-in",
             "properties": {
-              "description": "Allow RDP",
+              "description": "Allow RDP inbound",
               "protocol": "Tcp",
               "sourcePortRange": "*",
               "destinationPortRange": "3389",
               "sourceAddressPrefix": "*",
               "destinationAddressPrefix": "*",
               "access": "Allow",
-              "priority": 100,
+              "priority": 500,
               "direction": "Inbound"
+            }
+          },
+          {
+            "name": "[concat('allow-live-corenva-in', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Live subnet inbound",
+              "priority": 210,
+              "access": "Allow",
+              "direction": "Inbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          },
+          {
+            "name": "[concat('allow-corenva-live-out', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Live subnet outbound",
+              "priority": 220,
+              "access": "Allow",
+              "direction": "Outbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          },
+          {
+            "name": "[concat('allow-nonlive-corenva-in', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Non-Live subnet inbound",
+              "priority": 310,
+              "access": "Allow",
+              "direction": "Inbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          },
+          {
+            "name": "[concat('allow-corenva-nonlive-out', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Non-Live subnet outbound",
+              "priority": 320,
+              "access": "Allow",
+              "direction": "Outbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
+              "destinationPortRange": "*"
             }
           }
         ]
@@ -183,7 +239,64 @@
       },
       "apiVersion": "2016-03-30",
       "properties": {
-        "securityRules": []
+        "securityRules": [
+          {
+            "name": "[concat('allow-corenva-live-in', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Core NVA subnet inbound",
+              "priority": 110,
+              "access": "Allow",
+              "direction": "Inbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          },
+          {
+            "name": "[concat('allow-live-corenva-out', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Core NVA subnet outbound",
+              "priority": 120,
+              "access": "Allow",
+              "direction": "Outbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          },
+          {
+            "name": "[concat('allow-nonlive-live-in', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Non-Live subnet inbound",
+              "priority": 310,
+              "access": "Allow",
+              "direction": "Inbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          },
+          {
+            "name": "[concat('allow-live-nonlive-out', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Non-Live subnet outbound",
+              "priority": 320,
+              "access": "Allow",
+              "direction": "Outbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          }
+        ]
       }
     },
     {
@@ -196,7 +309,64 @@
       },
       "apiVersion": "2016-03-30",
       "properties": {
-        "securityRules": []
+        "securityRules": [
+          {
+            "name": "[concat('allow-corenva-nonlive-in', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Core NVA subnet inbound",
+              "priority": 110,
+              "access": "Allow",
+              "direction": "Inbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          },
+          {
+            "name": "[concat('allow-nonlive-corenva-out', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Core NVA subnet outbound",
+              "priority": 120,
+              "access": "Allow",
+              "direction": "Outbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetNvaSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          },
+          {
+            "name": "[concat('allow-live-nonlive-in', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Live subnet inbound",
+              "priority": 210,
+              "access": "Allow",
+              "direction": "Inbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          },
+          {
+            "name": "[concat('allow-nonlive-live-out', copyIndex(1))]",
+            "properties": {
+              "description": "Allow Live subnet outbound",
+              "priority": 220,
+              "access": "Allow",
+              "direction": "Outbound",
+              "protocol": "*",
+              "sourceAddressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
+              "sourcePortRange": "*",
+              "destinationAddressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetSubnetSuffix'))]",
+              "destinationPortRange": "*"
+            }
+          }
+        ]
       }
     },
     {
@@ -318,7 +488,7 @@
           {
             "name": "Subnet",
             "properties": {
-              "addressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetNvaSubnetSuffix'))]",
+              "addressPrefix": "[concat(parameters('liveLocationVnetPrefixes')[copyIndex()], variables('liveVnetSubnetSuffix'))]",
               "networkSecurityGroup": {
                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('liveSubnetNsgName'), copyIndex(1)))]"
               },
@@ -353,7 +523,7 @@
           {
             "name": "Subnet",
             "properties": {
-              "addressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetNvaSubnetSuffix'))]",
+              "addressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
               "networkSecurityGroup": {
                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('nonLiveSubnetNsgName'), copyIndex(1)))]"
               },
@@ -380,7 +550,7 @@
         "[resourceId('Microsoft.Network/virtualNetworkGateways/', concat(variables('gatewayName'), copyIndex(1)))]"
       ],
       "properties": {
-        "allowVirtualNetworkAccess": true,
+        "allowVirtualNetworkAccess": false,
         "allowForwardedTraffic": true,
         "allowGatewayTransit": true,
         "useRemoteGateways": false,
@@ -404,8 +574,8 @@
         "[resourceId('Microsoft.Network/virtualNetworkGateways/', concat(variables('gatewayName'), copyIndex(1)))]"
       ],
       "properties": {
-        "allowVirtualNetworkAccess": true,
-        "allowForwardedTraffic": false,
+        "allowVirtualNetworkAccess": false,
+        "allowForwardedTraffic": true,
         "allowGatewayTransit": false,
         "useRemoteGateways": true,
         "remoteVirtualNetwork": {
@@ -428,7 +598,7 @@
         "[resourceId('Microsoft.Network/virtualNetworkGateways/', concat(variables('gatewayName'), copyIndex(1)))]"
       ],
       "properties": {
-        "allowVirtualNetworkAccess": true,
+        "allowVirtualNetworkAccess": false,
         "allowForwardedTraffic": true,
         "allowGatewayTransit": true,
         "useRemoteGateways": false,
@@ -452,8 +622,8 @@
         "[resourceId('Microsoft.Network/virtualNetworkGateways/', concat(variables('gatewayName'), copyIndex(1)))]"
       ],
       "properties": {
-        "allowVirtualNetworkAccess": true,
-        "allowForwardedTraffic": false,
+        "allowVirtualNetworkAccess": false,
+        "allowForwardedTraffic": true,
         "allowGatewayTransit": false,
         "useRemoteGateways": true,
         "remoteVirtualNetwork": {
