@@ -1,33 +1,40 @@
-﻿$scriptsStorageRg = "rbcommon"
-$scriptsStorageAccount = "rbcommon"
-$scriptsStorageContainer = "scripts"
-$rgPrefix = "rbpeer"
-$deployName = $rgPrefix + "-" + (Get-Date -Format "yyyyMMddHHmmss")
-$rgLocation = "northeurope"
-$templateParameters = @{
-    "namePrefix" = $rgPrefix;
-    "locations" = @("northeurope", "westeurope");
-    "coreLocationVnetPrefixes" = @("10.0.", "10.1.");
-    "liveLocationVnetPrefixes" = @("10.2.", "10.3.");
-    "nonLiveLocationVnetPrefixes" = @("10.4.", "10.5.");
-    "adminUsername" = "Rupert";
-    "adminPassword" = "P@55W0rd123!"
-}
+﻿param (
+    [string] $ScriptsStorageRg = "rbcommon",
+    [string] $ScriptsStorageAccount = "rbcommon",
+    [string] $ScriptsStorageContainer = "scripts",
+    [string] $RgPrefix = "rbpeer",
+    [string] $RgLocation = "northeurope",
+    $TemplateParameters = @{
+        "namePrefix" = $RgPrefix;
+        "locations" = @("northeurope", "westeurope");
+        "coreLocationVnetPrefixes" = @("10.0.", "10.1.");
+        "liveLocationVnetPrefixes" = @("10.2.", "10.3.");
+        "nonLiveLocationVnetPrefixes" = @("10.4.", "10.5.");
+        "adminUsername" = "Rupert";
+        "adminPassword" = "P@55W0rd123!"
+    }
+)
+
+# Create scripts storage if it doesn't exist
+New-AzureRmStorageAccount -ResourceGroupName $ScriptsStorageRg -Name $ScriptsStorageAccount -Location $RgLocation -ErrorAction SilentlyContinue
 
 # Upload scripts to storage
-$context = New-AzureStorageContext -StorageAccountName $scriptsStorageAccount -StorageAccountKey (Get-AzureRmStorageAccountKey -ResourceGroupName $scriptsStorageRg -StorageAccountName $scriptsStorageAccount)[0].Value -ErrorAction Stop
-New-AzureStorageContainer -Context $context -Name $scriptsStorageContainer -ErrorAction SilentlyContinue
+$key = (Get-AzureRmStorageAccountKey -ResourceGroupName $ScriptsStorageRg -StorageAccountName $ScriptsStorageAccount)[0].Value
+$context = New-AzureStorageContext -StorageAccountName $ScriptsStorageAccount -StorageAccountKey $key -ErrorAction Stop
+New-AzureStorageContainer -Context $context -Name $ScriptsStorageContainer -ErrorAction SilentlyContinue
 Get-ChildItem -Path ".\Scripts" | %{
-    Set-AzureStorageBlobContent -Context $context -Container $scriptsStorageContainer -Force -Blob $_.Name -File $_.FullName -ErrorAction Stop
+    Set-AzureStorageBlobContent -Context $context -Container $ScriptsStorageContainer -Force -Blob $_.Name -File $_.FullName -ErrorAction Stop
 }
 
 # Get a SAS token for storage access
-$token = New-AzureStorageContainerSASToken -Context $context -Container $scriptsStorageContainer -Permission r -Protocol HttpsOnly -ExpiryTime (Get-Date).AddHours(1) -ErrorAction Stop
+$expiry = (Get-Date).ToUniversalTime().AddHours(4)
+$token = New-AzureStorageContainerSASToken -Context $context -Container $ScriptsStorageContainer -Permission r -Protocol HttpsOnly -ExpiryTime $expiry -ErrorAction Stop
 
 # Add storage location and SAS token to template parameters
-$templateParameters.Add("scriptsStorage", "https://$scriptsStorageAccount.blob.core.windows.net/$scriptsStorageContainer")
-$templateParameters.Add("scriptsSasToken", $token)
+$TemplateParameters.Add("scriptsStorage", "https://$ScriptsStorageAccount.blob.core.windows.net/$ScriptsStorageContainer")
+$TemplateParameters.Add("scriptsSasToken", $token)
 
 # Create resource group and deploy template
-New-AzureRmResourceGroup -Name $rgPrefix -Location $rgLocation -ErrorAction SilentlyContinue
-New-AzureRmResourceGroupDeployment -DeploymentName $deployName -ResourceGroupName $rgPrefix -TemplateFile ".\EnterpriseNetwork.json" -TemplateParameterObject $templateParameters
+$deployName = $RgPrefix + "-" + ((Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss"))
+New-AzureRmResourceGroup -Name $RgPrefix -Location $RgLocation -ErrorAction SilentlyContinue
+New-AzureRmResourceGroupDeployment -DeploymentName $deployName -ResourceGroupName $RgPrefix -TemplateFile ".\EnterpriseNetwork.json" -TemplateParameterObject $TemplateParameters
