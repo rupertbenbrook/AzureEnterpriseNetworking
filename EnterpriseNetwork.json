@@ -68,7 +68,6 @@
     "diagStorageName": "[concat(parameters('namePrefix'), 'diag')]",
     "diagStorageType": "Standard_LRS",
     // NSGs
-    "coreGatewayNsgName": "coregwnsg",
     "coreNvaNsgName": "corenvansg",
     "liveSubnetNsgName": "livensg",
     "nonLiveSubnetNsgName": "nlivensg",
@@ -145,19 +144,6 @@
       },
       "kind": "Storage",
       "properties": {}
-    },
-    {
-      "name": "[concat(variables('coreGatewayNsgName'), copyIndex(1))]",
-      "type": "Microsoft.Network/networkSecurityGroups",
-      "location": "[parameters('locations')[copyIndex()]]",
-      "copy": {
-        "name": "coreGatewayNsgCopy",
-        "count": "[length(parameters('locations'))]"
-      },
-      "apiVersion": "2016-03-30",
-      "properties": {
-        "securityRules": []
-      }
     },
     {
       "name": "[concat(variables('coreNvaNsgName'), copyIndex(1))]",
@@ -275,7 +261,6 @@
       },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('coreGatewayNsgName'), copyIndex(1)))]",
         "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('coreNvaNsgName'), copyIndex(1)))]",
         "[resourceId('Microsoft.Network/routeTables/', concat(variables('coreNvaRouteTableName'), copyIndex(1)))]"
       ],
@@ -290,9 +275,6 @@
             "name": "GatewaySubnet",
             "properties": {
               "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetGatewaySubnetSuffix'))]",
-              "networkSecurityGroup": {
-                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('coreGatewayNsgName'), copyIndex(1)))]"
-              },
               "routeTable": {
                 "id": "[resourceId('Microsoft.Network/routeTables', concat(variables('coreGatewayRouteTableName'), copyIndex(1)))]"
               }
