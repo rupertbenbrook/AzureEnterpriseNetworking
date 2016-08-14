@@ -399,7 +399,7 @@
             "properties": {
               "addressPrefix": "0.0.0.0",
               "nextHopType": "VirtualAppliance",
-              "nextHopIpAddress": "[concat(parameters('coreLocationVnetPrefixes'), variables('nvaPrivateIpSuffix'))]"
+              "nextHopIpAddress": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('nvaPrivateIpSuffix'))]"
             }
           }
         ]
@@ -421,7 +421,7 @@
             "properties": {
               "addressPrefix": "0.0.0.0",
               "nextHopType": "VirtualAppliance",
-              "nextHopIpAddress": "[concat(parameters('coreLocationVnetPrefixes'), variables('nvaPrivateIpSuffix'))]"
+              "nextHopIpAddress": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('nvaPrivateIpSuffix'))]"
             }
           }
         ]
@@ -762,7 +762,7 @@
             "name": "[concat(variables('nvaVmNicName'), copyIndex(1), 'ipconfig')]",
             "properties": {
               "privateIPAllocationMethod": "Static",
-              "privateIPAddress": "[concat(parameters('coreLocationVnetPrefixes'), variables('nvaPrivateIpSuffix'))]",
+              "privateIPAddress": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('nvaPrivateIpSuffix'))]",
               "subnet": {
                 "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('coreVnetName'), copyIndex(1))), '/subnets/NvaSubnet')]"
               }
