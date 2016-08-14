@@ -16,7 +16,7 @@
 )
 
 # Create scripts storage if it doesn't exist
-New-AzureRmStorageAccount -ResourceGroupName $ScriptsStorageRg -Name $ScriptsStorageAccount -Location $RgLocation -ErrorAction SilentlyContinue
+New-AzureRmStorageAccount -ResourceGroupName $ScriptsStorageRg -Name $ScriptsStorageAccount -Location $RgLocation -SkuName Standard_LRS -Kind Storage -ErrorAction SilentlyContinue
 
 # Upload scripts to storage
 $key = (Get-AzureRmStorageAccountKey -ResourceGroupName $ScriptsStorageRg -StorageAccountName $ScriptsStorageAccount)[0].Value
