@@ -85,6 +85,7 @@
     "coreVnetNvaSubnetSuffix": "1.0/24",
     "liveVnetSubnetSuffix": "1.0/24",
     "nonLiveVnetSubnetSuffix": "1.0/24",
+    "nvaPrivateIpSuffix": "1.4",
     // Gateways
     "gatewayPublicIpName": "[concat(parameters('namePrefix'), 'gwip')]",
     "gatewayName": "[concat(parameters('namePrefix'), 'gw')]",
@@ -370,19 +371,6 @@
       }
     },
     {
-      "name": "[concat(variables('coreGatewayRouteTableName'), copyIndex(1))]",
-      "type": "Microsoft.Network/routeTables",
-      "location": "[parameters('locations')[copyIndex()]]",
-      "copy": {
-        "name": "coreGatewayRouteTableCopy",
-        "count": "[length(parameters('locations'))]"
-      },
-      "apiVersion": "2016-03-30",
-      "properties": {
-        "routes": []
-      }
-    },
-    {
       "name": "[concat(variables('coreNvaRouteTableName'), copyIndex(1))]",
       "type": "Microsoft.Network/routeTables",
       "location": "[parameters('locations')[copyIndex()]]",
@@ -405,7 +393,16 @@
       },
       "apiVersion": "2016-03-30",
       "properties": {
-        "routes": []
+        "routes": [
+          {
+            "name": "defaultLiveToNva",
+            "properties": {
+              "addressPrefix": "0.0.0.0",
+              "nextHopType": "VirtualAppliance",
+              "nextHopIpAddress": "[concat(parameters('coreLocationVnetPrefixes'), variables('nvaPrivateIpSuffix'))]"
+            }
+          }
+        ]
       }
     },
     {
@@ -418,7 +415,16 @@
       },
       "apiVersion": "2016-03-30",
       "properties": {
-        "routes": []
+        "routes": [
+          {
+            "name": "defaultNonLiveToNva",
+            "properties": {
+              "addressPrefix": "0.0.0.0",
+              "nextHopType": "VirtualAppliance",
+              "nextHopIpAddress": "[concat(parameters('coreLocationVnetPrefixes'), variables('nvaPrivateIpSuffix'))]"
+            }
+          }
+        ]
       }
     },
     {
@@ -755,7 +761,8 @@
           {
             "name": "[concat(variables('nvaVmNicName'), copyIndex(1), 'ipconfig')]",
             "properties": {
-              "privateIPAllocationMethod": "Dynamic",
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[concat(parameters('coreLocationVnetPrefixes'), variables('nvaPrivateIpSuffix'))]",
               "subnet": {
                 "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('coreVnetName'), copyIndex(1))), '/subnets/NvaSubnet')]"
               }
