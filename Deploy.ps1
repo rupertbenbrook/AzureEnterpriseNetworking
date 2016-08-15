@@ -27,7 +27,7 @@ Get-ChildItem -Path ".\Scripts" | %{
 }
 
 # Get a SAS token for storage access
-$expiry = (Get-Date).ToUniversalTime().AddHours(4)
+$expiry = (Get-Date).ToUniversalTime().AddDays(1)
 $token = New-AzureStorageContainerSASToken -Context $context -Container $ScriptsStorageContainer -Permission r -Protocol HttpsOnly -ExpiryTime $expiry -ErrorAction Stop
 
 # Add storage location and SAS token to template parameters
