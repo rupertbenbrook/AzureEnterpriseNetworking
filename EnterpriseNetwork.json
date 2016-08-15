@@ -778,7 +778,8 @@
       },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('nvaVmNicName'), copyIndex(1)))]"
       ],
       "properties": {
         "ipConfigurations": [
