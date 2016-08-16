@@ -109,7 +109,10 @@
     "vmSize": "Standard_F1",
     "vmImagePublisher": "MicrosoftWindowsServer",
     "vmImageOffer": "WindowsServer",
-    "vmWindowsOSVersion": "2012-R2-Datacenter",
+    "vmOSVersion": "2012-R2-Datacenter",
+    "nvaVmImagePublisher": "Canonical",
+    "nvaVmImageOffer": "UbuntuServer",
+    "nvaVmOSVersion": "16.04.0-LTS",
     "vmConfigScript": "VmConfig.ps1",
     "nvaConfigScript": "NvaConfig.ps1",
     // Diagnostics
@@ -917,9 +920,9 @@
         },
         "storageProfile": {
           "imageReference": {
-            "publisher": "[variables('vmImagePublisher')]",
-            "offer": "[variables('vmImageOffer')]",
-            "sku": "[variables('vmWindowsOSVersion')]",
+            "publisher": "[variables('nvaVmImagePublisher')]",
+            "offer": "[variables('nvaVmImageOffer')]",
+            "sku": "[variables('nvaVmOSVersion')]",
             "version": "latest"
           },
           "osDisk": {
@@ -946,7 +949,7 @@
         }
       },
       "resources": [
-        {
+/*        {
           "name": "Microsoft.Insights.VMDiagnosticsSettings",
           "type": "extensions",
           "location": "[parameters('locations')[copyIndex()]]",
@@ -967,36 +970,6 @@
               "storageAccountName": "[concat(variables('diagStorageName'), copyIndex(1))]",
               "storageAccountKey": "[listkeys(resourceId('Microsoft.Storage/storageAccounts/', concat(variables('diagStorageName'), copyIndex(1))), '2015-06-15').key1]",
               "storageAccountEndPoint": "https://core.windows.net"
-            }
-          }
-        },
-        {
-          "name": "IaaSAntimalware",
-          "type": "extensions",
-          "location": "[parameters('locations')[copyIndex()]]",
-          "apiVersion": "2015-06-15",
-          "dependsOn": [
-            "[concat('Microsoft.Compute/virtualMachines/', concat(variables('nvaVmName'), copyIndex(1)))]"
-          ],
-          "properties": {
-            "publisher": "Microsoft.Azure.Security",
-            "type": "IaaSAntimalware",
-            "typeHandlerVersion": "1.3",
-            "autoUpgradeMinorVersion": true,
-            "settings": {
-              "AntimalwareEnabled": true,
-              "RealtimeProtectionEnabled": "true",
-              "ScheduledScanSettings": {
-                "isEnabled": "false",
-                "day": "7",
-                "time": "120",
-                "scanType": "Quick"
-              },
-              "Exclusions": {
-                "Extensions": "",
-                "Paths": "",
-                "Processes": ""
-              }
             }
           }
         },
@@ -1022,7 +995,7 @@
             }
           }
         }
-      ]
+*/      ]
     },
     {
       "name": "[concat(variables('jumpVmName'), copyIndex(1))]",
@@ -1052,7 +1025,7 @@
           "imageReference": {
             "publisher": "[variables('vmImagePublisher')]",
             "offer": "[variables('vmImageOffer')]",
-            "sku": "[variables('vmWindowsOSVersion')]",
+            "sku": "[variables('vmOSVersion')]",
             "version": "latest"
           },
           "osDisk": {
@@ -1183,7 +1156,7 @@
           "imageReference": {
             "publisher": "[variables('vmImagePublisher')]",
             "offer": "[variables('vmImageOffer')]",
-            "sku": "[variables('vmWindowsOSVersion')]",
+            "sku": "[variables('vmOSVersion')]",
             "version": "latest"
           },
           "osDisk": {
@@ -1314,7 +1287,7 @@
           "imageReference": {
             "publisher": "[variables('vmImagePublisher')]",
             "offer": "[variables('vmImageOffer')]",
-            "sku": "[variables('vmWindowsOSVersion')]",
+            "sku": "[variables('vmOSVersion')]",
             "version": "latest"
           },
           "osDisk": {
