@@ -69,10 +69,12 @@
     "diagStorageType": "Standard_LRS",
     // NSGs
     "coreNvaNsgName": "corenvansg",
+    "coreJumpNsgName": "corejumpnsg",
     "liveSubnetNsgName": "livensg",
     "nonLiveSubnetNsgName": "nlivensg",
     // Route Tables
     "coreNvaRouteTableName": "corenvaroute",
+    "coreJumpRouteTableName": "corejumproute",
     "liveRouteTableName": "liveroute",
     "nonLiveRouteTableName": "nliveroute",
     // Vnets
@@ -82,6 +84,7 @@
     "vnetAddressSuffix": "0.0/16",
     "coreVnetGatewaySubnetSuffix": "0.0/24",
     "coreVnetNvaSubnetSuffix": "1.0/24",
+    "coreVnetJumpSubnetSuffix": "2.0/24",
     "liveVnetSubnetSuffix": "1.0/24",
     "nonLiveVnetSubnetSuffix": "1.0/24",
     "nvaPrivateIpSuffix": "1.4",
@@ -157,20 +160,6 @@
       "properties": {
         "securityRules": [
           {
-            "name": "allow-rdp-in",
-            "properties": {
-              "description": "Allow RDP inbound",
-              "protocol": "Tcp",
-              "sourcePortRange": "*",
-              "destinationPortRange": "3389",
-              "sourceAddressPrefix": "*",
-              "destinationAddressPrefix": "*",
-              "access": "Allow",
-              "priority": 500,
-              "direction": "Inbound"
-            }
-          },
-          {
             "name": "[concat('allow-live-corenva-in', copyIndex(1))]",
             "properties": {
               "description": "Allow Live subnet inbound",
@@ -224,6 +213,34 @@
               "sourcePortRange": "*",
               "destinationAddressPrefix": "[concat(parameters('nonLiveLocationVnetPrefixes')[copyIndex()], variables('nonLiveVnetSubnetSuffix'))]",
               "destinationPortRange": "*"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[concat(variables('coreJumpNsgName'), copyIndex(1))]",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "coreJumpNsgCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "allow-rdp-in",
+            "properties": {
+              "description": "Allow RDP inbound",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 500,
+              "direction": "Inbound"
             }
           }
         ]
@@ -383,6 +400,19 @@
       }
     },
     {
+      "name": "[concat(variables('coreJumpRouteTableName'), copyIndex(1))]",
+      "type": "Microsoft.Network/routeTables",
+      "location": "[parameters('locations')[copyIndex()]]",
+      "copy": {
+        "name": "coreJumpRouteTableCopy",
+        "count": "[length(parameters('locations'))]"
+      },
+      "apiVersion": "2016-03-30",
+      "properties": {
+        "routes": []
+      }
+    },
+    {
       "name": "[concat(variables('liveRouteTableName'), copyIndex(1))]",
       "type": "Microsoft.Network/routeTables",
       "location": "[parameters('locations')[copyIndex()]]",
@@ -437,7 +467,9 @@
       "apiVersion": "2016-03-30",
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('coreNvaNsgName'), copyIndex(1)))]",
-        "[resourceId('Microsoft.Network/routeTables/', concat(variables('coreNvaRouteTableName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/routeTables/', concat(variables('coreNvaRouteTableName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups/', concat(variables('coreJumpNsgName'), copyIndex(1)))]",
+        "[resourceId('Microsoft.Network/routeTables/', concat(variables('coreJumpRouteTableName'), copyIndex(1)))]"
       ],
       "properties": {
         "addressSpace": {
@@ -461,6 +493,18 @@
               },
               "routeTable": {
                 "id": "[resourceId('Microsoft.Network/routeTables', concat(variables('coreNvaRouteTableName'), copyIndex(1)))]"
+              }
+            }
+          },
+          {
+            "name": "JumpSubnet",
+            "properties": {
+              "addressPrefix": "[concat(parameters('coreLocationVnetPrefixes')[copyIndex()], variables('coreVnetJumpSubnetSuffix'))]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(variables('coreJumpNsgName'), copyIndex(1)))]"
+              },
+              "routeTable": {
+                "id": "[resourceId('Microsoft.Network/routeTables', concat(variables('coreJumpRouteTableName'), copyIndex(1)))]"
               }
             }
           }
@@ -778,8 +822,7 @@
       },
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]",
-        "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('nvaVmNicName'), copyIndex(1)))]"
+        "[resourceId('Microsoft.Network/virtualNetworks/', concat(variables('coreVnetName'), copyIndex(1)))]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -791,7 +834,7 @@
               },
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('coreVnetName'), copyIndex(1))), '/subnets/NvaSubnet')]"
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', concat(variables('coreVnetName'), copyIndex(1))), '/subnets/JumpSubnet')]"
               }
             }
           }
@@ -991,6 +1034,7 @@
       },
       "apiVersion": "2015-06-15",
       "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/', concat(variables('nvaVmName'), copyIndex(1)))]",
         "[resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))]",
         "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('jumpVmNicName'), copyIndex(1)))]",
         "[resourceId('Microsoft.Network/publicIPAddresses/', concat(variables('jumpVmPublicIpName'), copyIndex(1)))]"
@@ -1122,6 +1166,7 @@
       },
       "apiVersion": "2015-06-15",
       "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/', concat(variables('nvaVmName'), copyIndex(1)))]",
         "[resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))]",
         "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('liveVmNicName'), copyIndex(1)))]"
       ],
@@ -1252,6 +1297,7 @@
       },
       "apiVersion": "2015-06-15",
       "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/', concat(variables('nvaVmName'), copyIndex(1)))]",
         "[resourceId('Microsoft.Storage/storageAccounts/', concat(variables('vhdStorageName'), copyIndex(1)))]",
         "[resourceId('Microsoft.Network/networkInterfaces/', concat(variables('nonLiveVmNicName'), copyIndex(1)))]"
       ],
