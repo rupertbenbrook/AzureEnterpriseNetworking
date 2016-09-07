@@ -4,13 +4,21 @@ Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private
 # Allow file sharing (and ping)
 Set-NetFirewallRule -DisplayGroup "File And Printer Sharing" -Enabled True
 
-# Turn off IE enhanced security for admins
+# Turn off IE enhanced security for admins and users
 $adminKey = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}"
+$userKey = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}"
 Set-ItemProperty -Path $adminKey -Name "IsInstalled" -Value 0 -Force
+Set-ItemProperty -Path $userKey -Name "IsInstalled" -Value 0 -Force
+Stop-Process -Name Explorer
 
 # Enable Windows SmartScreen
 $smartScreenKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"
 Set-ItemProperty -Path $smartScreenKey -Name "SmartScreenEnabled" -Value "RequireAdmin" -Force             
+
+# Enable Microsoft Update
+$serviceManager = New-Object -ComObject "Microsoft.Update.ServiceManager"
+$serviceManager.ClientApplicationID = "My App"
+$serviceManager.AddService2("7971f918-a847-4430-9279-4a52d1efe18d", 7, "")
 
 # Download and extract iperf
 if ((Test-Path -Path "C:\iperf-*") -eq $false) {
@@ -24,11 +32,6 @@ if ((Test-Path -Path "C:\iperf-*") -eq $false) {
 # Allow iperf Server port
 New-NetFirewallRule -DisplayName "iPerf Server TCP" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5201
 New-NetFirewallRule -DisplayName "iPerf Server UDP" -Direction Inbound -Action Allow -Protocol UDP -LocalPort 5201
-
-# Enable Microsoft Update
-$serviceManager = New-Object -ComObject "Microsoft.Update.ServiceManager"
-$serviceManager.ClientApplicationID = "My App"
-$serviceManager.AddService2("7971f918-a847-4430-9279-4a52d1efe18d", 7, "")
 
 # Download and install any updates, rebooting if needed
 Write-Host "Searching for updates..."
