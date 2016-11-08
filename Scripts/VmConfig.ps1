@@ -21,12 +21,21 @@ $serviceManager.ClientApplicationID = "My App"
 $serviceManager.AddService2("7971f918-a847-4430-9279-4a52d1efe18d", 7, "")
 
 # Download and extract iperf
-if ((Test-Path -Path "C:\iperf-*") -eq $false) {
+if ((Test-Path -Path "C:\Tools\iperf-*") -eq $false) {
     $iperfZip = "$env:TEMP\iperf.zip"
     Invoke-WebRequest -Uri "https://iperf.fr/download/windows/iperf-3.1.3-win64.zip" -OutFile $iperfZip
     Add-Type -As System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($iperfZip, "C:\")
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($iperfZip, "C:\Tools")
     Remove-Item -Path $iperfZip -Force
+}
+
+# Download and extract SysInternals Tools
+if ((Test-Path -Path "C:\Tools\SysInternals") -eq $false) {
+    $sysInternalsZip = "$env:TEMP\SysInternals.zip"
+    Invoke-WebRequest -Uri "https://download.sysinternals.com/files/SysinternalsSuite.zip" -OutFile $sysInternalsZip
+    Add-Type -As System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($sysInternalsZip, "C:\Tools\SysInternals")
+    Remove-Item -Path $sysInternalsZip -Force
 }
 
 # Allow iperf Server port
